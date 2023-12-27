@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>hexmap</title>
+        <style>
+            body, html {
+                margin: 0;
+                padding: 0;
+                height: 100%;
+                background-color: gray;
+            }
+
+            #status-line {
+                background-color: #94282b;
+                color: #fff;
+                padding: 10px;
+                width: 100%;
+                box-sizing: border-box;
+            }
+
+            #main-container {
+                display: flex;
+                height: calc(100% - 40px);
+            }
+
+            #ship-info-container {
+                width: 300px;
+                background-color: #4e4c41;
+                box-sizing: border-box;
+            }
+            
+            #map-container {
+                flex: 1;
+                background-color: #575c5c;
+                box-sizing: border-box;
+            }
+        </style>
+    </head>
+    
+    <body>
+        <div>
+            <div id="status-line">status line</div>
+        </div>
+        <div id="main-container">
+            <div id="ship-info-container">
+                <label>card info</label>
+                <button/>
+            </div>
+            <div id="map-container">
+	        <svg id="svg" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
+	            <g id="map" transform="translate(0, 0) scale(0.5)"/>
+	        </svg>
+            </div>
+        </div>
+	<script src="main.js"></script>
+    </body>
+</html>
