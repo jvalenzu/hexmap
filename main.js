@@ -198,8 +198,6 @@ function addShip(gamestate, hex, facing)
     gamestate.shipYard.klass[index] = 'heavy cruiser';
     gamestate.shipYard.hexids[index] = hex.id;
     gamestate.shipYard.facings[index] = facing;
-
-    console.log(`gamestate.shipYard.facings[${index}] = ${facing}`);
 }
 
 function getDirectionFacing(sourceHexId, targetHexId)
@@ -248,7 +246,6 @@ function isShipMoveEligible(gamestate, sourceHexId, targetHexId, ship_facing)
         return false;
 
     let direction = getDirectionFacing(sourceHexId, targetHexId);
-    console.log(Math.abs((direction - ship_facing) % 5));
     if (Math.abs((direction - ship_facing) % 5) <= 1)
         return true;
 
