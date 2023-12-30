@@ -1,5 +1,7 @@
 var svgns = "http://www.w3.org/2000/svg";
 
+
+
 // jiv todo
 // * status line
 // * fix hex tile layout
@@ -22,6 +24,22 @@ var svgns = "http://www.w3.org/2000/svg";
 // * subimpulses since last slip
 // * base speed this turn
 // * acceleration this impulse
+
+/*
+
+ Facing
+        _________
+       /    |    \
+      /\    |    /\
+     /  5   0   1  \
+    /    \  |  /    \
+   |      \ | /     |
+    \     / | \     /
+     \   4  3  2   /
+      \ /   |   \ /
+       \____|____/
+
+ */
 
 const debugColors = [
     '#00ff00',
@@ -60,12 +78,12 @@ var g_GameState =
         ids : [],
         callsigns : [],
         klass : [],
-        hexids : []
+        hexids : [],
+        facings : []
     }
 };
 
-const g_Debug = true;
-
+const g_Debug = false;
 
 // modes
 // * default
@@ -76,12 +94,18 @@ var g_UIState =
 {
     mouse: { x: 0, y: 0 },
     viewport: { x: 0, y: 0, width: 1000, height: 1000 },
-    selected: null,
+    selectedHex: null,
+    selectedShip: null,
     events: 0,
     tools_mode: "place"
 };
 
 var g_Scale = 1;
+
+function refreshUi()
+{
+    window.requestAnimationFrame(draw);
+}
 
 function updateStatusLine(value)
 {
@@ -91,8 +115,33 @@ function updateStatusLine(value)
 
 function updateStatusLine2(value0, value1)
 {
-    var status_line = document.getElementById("status-line");
-    status_line.innerHTML = `<div style="float: left; padding-right: 89px">${value0}</div><div style="float: right"><button id='commit'>Commit</button><button id='undo'>Undo</button></div><div>${value1}</div>`;
+    //  jiv TODO: seems like a perfect place for a template
+    let statusLine = document.getElementById("status-line");
+    statusLine.innerHTML = "";
+
+    let divLeft = document.createElement("div");
+    divLeft.setAttribute("style", "float: left; padding-right: 89px;");
+    divLeft.appendChild(document.createTextNode(value0));
+    
+    let divRight = document.createElement("div");
+    divRight.setAttribute("style", "float: right;");
+    
+    let button0 = document.createElement("button");
+    button0.setAttribute("id", "commit");
+    button0.appendChild(document.createTextNode("Commit"));
+    
+    let button1 = document.createElement("button");
+    button1.setAttribute("id", "undo");
+    button1.appendChild(document.createTextNode("Undo"));
+    
+    let divStatus = document.createElement("div");
+    divStatus.appendChild(document.createTextNode(value1));
+    
+    statusLine.appendChild(divLeft);
+    statusLine.appendChild(divRight);
+    divRight.appendChild(button0);
+    divRight.appendChild(button1);
+    statusLine.appendChild(divStatus);
 }
 
 function updateGameStatus(state)
@@ -106,7 +155,9 @@ function updateGameStatus(state)
     {
     case "move":
         {
-            let status = ` MOVE: select next tile and orientation`;
+            let status = " MOVE: select ship";
+            if (g_UIState.selectedShip)
+                status = " MOVE: select next tile and orientation";
             updateStatusLine2(prefix, status);
             
             break;
@@ -126,12 +177,7 @@ function updateGameStatus(state)
     }
 }
 
-function refreshUi()
-{
-    window.requestAnimationFrame(draw);    
-}
-
-function addShip(gamestate, hex)
+function addShip(gamestate, hex, facing)
 {
     // add ui
     let image = document.createElementNS(svgns, "image");
@@ -140,7 +186,7 @@ function addShip(gamestate, hex)
     image.setAttribute("height",200);
     image.setAttribute("x",-100);
     image.setAttribute("y",-100);
-    image.setAttribute("transform","rotate(45 0 0)");
+    image.setAttribute("transform",`rotate(${60 * facing} 0 0)`);
 
     hex.parentElement.appendChild(image);
 
@@ -151,8 +197,62 @@ function addShip(gamestate, hex)
     gamestate.shipYard.callsigns[index] = 'ncc1701';
     gamestate.shipYard.klass[index] = 'heavy cruiser';
     gamestate.shipYard.hexids[index] = hex.id;
+    gamestate.shipYard.facings[index] = facing;
+
+    console.log(`gamestate.shipYard.facings[${index}] = ${facing}`);
+}
+
+function getDirectionFacing(sourceHexId, targetHexId)
+{
+    let q0 = sourceHexId<<16>>16;
+    let r0 = sourceHexId>>16;
+    let s0 = -q0 - r0;
     
-    console.log("Adding ship to " + hexToString(hex));
+    let q1 = targetHexId<<16>>16;
+    let r1 = targetHexId>>16;
+    let s1 = -q1 - r1;
+
+    let facing = -1;
+
+    if (q0 == q1)
+    {
+        if (r0 < r1)
+            facing = 3;
+        else
+            facing = 0;
+    }
+
+    if (r0 == r1)
+    {
+        if (q0 < q1)
+            facing = 2;
+        else
+            facing = 5;
+    }
+    
+    if (s0 == s1)
+    {
+        if (r0 < r1)
+            facing = 4;
+        else
+            facing = 1;
+    }
+
+    return facing;
+}
+
+function isShipMoveEligible(gamestate, sourceHexId, targetHexId, ship_facing)
+{
+    let dist = distByHexId(sourceHexId, targetHexId);
+    if (dist > 1)
+        return false;
+
+    let direction = getDirectionFacing(sourceHexId, targetHexId);
+    console.log(Math.abs((direction - ship_facing) % 5));
+    if (Math.abs((direction - ship_facing) % 5) <= 1)
+        return true;
+
+    return false;
 }
 
 function getShipIndexByHex(gamestate, hex)
@@ -190,12 +290,25 @@ function unselectByShip(gamestate)
 {
 }
 
-function getHexIdByShip(gamestate, shipId)
+function getHexById(hexId)
 {
-    let index = getShipIndexById(gamestate, shipId);
-    if (index >= 0)
-        return gamestate.shipYard.hexids[index];
-    return undefined;
+    let map = document.getElementById("map");
+    for (let child of map.children)
+    {
+        if (child instanceof SVGGElement)
+        {
+            if (child.id == hexId)
+            {
+                for (let pchild of child.children)
+                {
+                    if (pchild instanceof SVGPolygonElement)
+                        return pchild;
+                }
+            }
+        }
+    }
+
+    return null;
 }
 
 function distByHexId(hexid0, hexid1)
@@ -209,7 +322,6 @@ function distByHexId(hexid0, hexid1)
     let s1 = -q1 - r1;
     
     let d = (Math.abs(q1 - q0) + Math.abs(r1 - r0) + Math.abs(s1 - s0)) / 2;
-    // console.log(`Dist between ${hexIdToString(hexid0)} ${hexIdToString(hexid1)}: ${d}`);
     return d;
 }
 
@@ -241,7 +353,7 @@ function onHexClick(gamestate, hex, event)
     case "place":
         {
             // select
-            addShip(gamestate, hex);
+            addShip(gamestate, hex, 0);
             
             // update status line
             g_UIState.tools_mode = "move";
@@ -259,44 +371,25 @@ function onHexClick(gamestate, hex, event)
                 
                 g_UIState.selectedShip = gamestate.shipYard.ids[index];
                 gamestate.shipYard.hexids[index] = hex.id;
-                hex.setAttribute("style","fill:darkgray; stroke: red; stroke-width:20");
                 
-                // debug
-                if (g_Debug)
-                {
-                    let map = document.getElementById("map");
-                    for (let child of map.children)
-                    {
-                        if (child instanceof SVGGElement)
-                        {
-                            let dist = distByHexId(hex.id, child.id);
-                            let hexcolor = debugColors[dist % debugColors.length];
-                            
-                            for (let pchild of child.children)
-                            {
-                                if (pchild instanceof SVGPolygonElement)
-                                    pchild.setAttribute("style",`fill:${hexcolor};`);
-                            }
-                        }
-                    }
-                }
+                g_UIState.selectedHex = null;
+                
+                hex.setAttribute("class", "hex-selected-secondary");
+                
+                refreshUi();
             }
             else if (g_UIState.selectedShip)
             {
-                let previousHexId = getHexIdByShip(gamestate, g_UIState.selectedShip);
-                
-                if (distByHexId(previousHexId, hex.id) == 1)
-                    console.log("yes");
-                else
-                    console.log("no");
-                
-                /*
-                selectedHex.setAttribute("style","fill:darkgray; stroke:black");
-                g_UIState.selected = null;
-                
-                g_UIState.tools_mode = "default";
-                refreshUi();
-                */
+                let index = getShipIndexById(gamestate, g_UIState.selectedShip);
+                let ship_facing = gamestate.shipYard.facings[index];
+                let previousHexId = gamestate.shipYard.hexids[index];
+                if (isShipMoveEligible(gamestate, previousHexId, hex.id, ship_facing))
+                {
+                    if (g_UIState.selectedHex)
+                        g_UIState.selectedHex.setAttribute("class", "hex-unselected");
+                    g_UIState.selectedHex = hex;
+                    hex.setAttribute("class", "hex-selected");
+                }
             }
             
             break;
@@ -331,7 +424,7 @@ function init()
         
         var xoffset = start_xoffset;
         var yoffset = start_yoffset;
-
+        
         let num_cols = 10;
         let num_rows = 10;
         
@@ -357,11 +450,11 @@ function init()
                 let polygon = document.createElementNS(svgns, "polygon");
                 polygon.setAttribute("points","100,0 50,-87 -50,-87 -100,-0 -50,87 50,87");
                 polygon.setAttribute("overflow","visible");
-                polygon.setAttribute("style",`fill:gray; stroke:black`);
+                polygon.setAttribute("class", "hex-unselected");
                 
                 g.addEventListener('mouseup', (e) => { onHexClick(gamestate, polygon, e); }, false);
                 g.appendChild(polygon);
-
+                
                 {
                     let isDragging = false;
                     let startX, startY, currentX, currentY;

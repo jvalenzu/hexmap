@@ -1,0 +1,47 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background-color: gray;
+}
+
+#status-line {
+    background-color: #94282b;
+    color: #fff;
+    padding: 10px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#main-container {
+    display: flex;
+    height: calc(100% - 40px);
+}
+
+#ship-info-container {
+    width: 300px;
+    background-color: #4e4c41;
+    box-sizing: border-box;
+}
+
+#map-container {
+    flex: 1;
+    background-color: #575c5c;
+    box-sizing: border-box;
+}
+
+.hex-selected {
+    fill: gray;
+    stroke: red;
+    stroke-width:20;
+}
+
+.hex-selected-secondary {
+    fill: #972020;
+    stroke: black;
+}
+
+.hex-unselected {
+    fill: gray;
+    stroke: black;
+}
