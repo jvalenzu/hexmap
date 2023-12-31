@@ -66,20 +66,36 @@ const debugColors = [
     '#00ccff'
 ];
 
-var g_GameState =
+class Ship
+{
+    constructor(id, callsign, klass, hexid, facing)
+    {
+        this.id = id;
+        this.callsign = callsign;
+        this.klass = klass;
+        this.hexid = hexid;
+        this.facing = facing;
+    }
+};
+
+let g_GameState =
 {
     turn: 0,
     impulse: 0,
     subimpulse: 0,
-    ships: {},
+    ships:
+    [
+        {
+            id: -1,
+            callsign: null,
+            klass: null,
+            hexid: -1,
+            facing: 0
+        }
+    ],
     
     shipYard: {
-        id_gen: 1,
-        ids : [],
-        callsigns : [],
-        klass : [],
-        hexids : [],
-        facings : []
+        id_gen: 1
     }
 };
 
@@ -196,12 +212,8 @@ function addShip(gamestate, hex, facing)
     
     // add simulation
     let id = gamestate.shipYard.id_gen++;
-    let index = gamestate.shipYard.ids.length;
-    gamestate.shipYard.ids[index] = id;
-    gamestate.shipYard.callsigns[index] = 'ncc1701';
-    gamestate.shipYard.klass[index] = 'heavy cruiser';
-    gamestate.shipYard.hexids[index] = hex.id;
-    gamestate.shipYard.facings[index] = facing;
+    let shipInstance = new Ship(id, 'ncc1701', 'heavy cruiser', hex.id, facing);
+    gamestate.ships.push(shipInstance);
 }
 
 function getDirectionFacing(sourceHexId, targetHexId)
@@ -276,32 +288,27 @@ function isShipMoveEligible(gamestate, sourceHexId, targetHexId, ship_facing)
     return kMoveIneligible;
 }
 
-function getShipIndexByHex(gamestate, hex)
+function getShipIndexByHexId(gamestate, hexId)
 {
     // todo: multiple ships same hex
-    for (let i=0,ni=gamestate.shipYard.hexids.length; i<ni; ++i)
+    for (let i=0,ni=gamestate.ships.length; i<ni; ++i)
     {
-        if (gamestate.shipYard.hexids[i] == hex.id)
+        if (gamestate.ships[i].hexid == hexId)
             return i;
     }
     return -1;
 }
 
-function getShipIndexById(gamestate, hex)
+function getShipIndexByHex(gamestate, hex)
 {
-    for (let i=0,ni=gamestate.shipYard.hexids.length; i<ni; ++i)
-    {
-        if (gamestate.shipYard.hexids[i] == hex.id)
-            return i;
-    }
-    return -1;
+    return getShipIndexByHexId(gamestate, hex.id);
 }
 
 function getShipIndexById(gamestate, shipId)
 {
-    for (let i=0,ni=gamestate.shipYard.ids.length; i<ni; ++i)
+    for (let i=0,ni=gamestate.ships.length; i<ni; ++i)
     {
-        if (gamestate.shipYard.ids[i] == shipId)
+        if (gamestate.ships[i].id == shipId)
             return i;
     }
     return -1;
@@ -309,27 +316,6 @@ function getShipIndexById(gamestate, shipId)
 
 function unselectByShip(gamestate)
 {
-}
-
-function getHexById(hexId)
-{
-    let map = document.getElementById("map");
-    for (let child of map.children)
-    {
-        if (child instanceof SVGGElement)
-        {
-            if (child.id == hexId)
-            {
-                for (let pchild of child.children)
-                {
-                    if (pchild instanceof SVGPolygonElement)
-                        return pchild;
-                }
-            }
-        }
-    }
-
-    return null;
 }
 
 function distByHexId(hexid0, hexid1)
@@ -387,11 +373,13 @@ function onHexClick(gamestate, hex, event)
             let index = getShipIndexByHex(gamestate, hex);
             if (index >= 0)
             {
+                let shipInstance = gamestate.ships[index];
+                
                 if (g_UIState.selectedShip)
                     unselectByShip(gamestate, g_UIState.selectedShip);
                 
-                g_UIState.selectedShip = gamestate.shipYard.ids[index];
-                gamestate.shipYard.hexids[index] = hex.id;
+                g_UIState.selectedShip = shipInstance.id;
+                shipInstance.hexid = hex.id;
                 
                 g_UIState.selectedHex = null;
                 
@@ -402,9 +390,11 @@ function onHexClick(gamestate, hex, event)
             else if (g_UIState.selectedShip)
             {
                 let index = getShipIndexById(gamestate, g_UIState.selectedShip);
-                let ship_facing = gamestate.shipYard.facings[index];
-                let previousHexId = gamestate.shipYard.hexids[index];
-                const eligibility = isShipMoveEligible(gamestate, previousHexId, hex.id, ship_facing);
+                let shipInstance = gamestate.ships[index];
+                
+                let shipFacing = shipInstance.facing;
+                let previousHexId = shipInstance.hexid;
+                const eligibility = isShipMoveEligible(gamestate, previousHexId, hex.id, shipFacing);
                 if (eligibility != kMoveIneligible)
                 {
                     if (g_UIState.selectedHex)
