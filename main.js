@@ -1,22 +1,24 @@
 var svgns = "http://www.w3.org/2000/svg";
 
-
-
 // jiv todo
-// * status line
-// * fix hex tile layout
+// * pregenerate the hex map offline, there's no reason to do it live.
 // * need image dimension information associated ship pieces like NCC1701.png in order to
 //   avoid hard coded tweaks in code
 // * have a ship playable card in addition to starmap
-// * different context specific "modes"
-//   - move mode: start with selected ship, select next hex and turn marker if eligible
 // * zoom controls
-// * css
+//
+// * different context specific "modes"
+//   - move mode
+//     o start with selected ship
+//     o select next hex and turn marker if eligible
+//   - slip/turn button on status line
+//   - commit action
 //   
 // * orient ships
-// * seperate game and UI state
 // * move ship data into state
 // * resize destroys all ship instances: replace ship instances on redraw
+// * client/server logic
+//   * seperate out into client gathers input, server applies operations on data, saves to undo stack
 
 // ship instances
 // * reference to ship class
@@ -64,8 +66,6 @@ const debugColors = [
     '#00ccff'
 ];
 
-
-
 var g_GameState =
 {
     turn: 0,
@@ -107,6 +107,10 @@ function refreshUi()
     window.requestAnimationFrame(draw);
 }
 
+function uiUpdateButtons(buttonLabel)
+{
+}
+
 function updateStatusLine(value)
 {
     var status_line = document.getElementById("status-line");
@@ -118,7 +122,7 @@ function updateStatusLine2(value0, value1)
     //  jiv TODO: seems like a perfect place for a template
     let statusLine = document.getElementById("status-line");
     statusLine.innerHTML = "";
-
+    
     let divLeft = document.createElement("div");
     divLeft.setAttribute("style", "float: left; padding-right: 89px;");
     divLeft.appendChild(document.createTextNode(value0));
@@ -187,9 +191,9 @@ function addShip(gamestate, hex, facing)
     image.setAttribute("x",-100);
     image.setAttribute("y",-100);
     image.setAttribute("transform",`rotate(${60 * facing} 0 0)`);
-
+    
     hex.parentElement.appendChild(image);
-
+    
     // add simulation
     let id = gamestate.shipYard.id_gen++;
     let index = gamestate.shipYard.ids.length;
@@ -209,9 +213,9 @@ function getDirectionFacing(sourceHexId, targetHexId)
     let q1 = targetHexId<<16>>16;
     let r1 = targetHexId>>16;
     let s1 = -q1 - r1;
-
+    
     let facing = -1;
-
+    
     if (q0 == q1)
     {
         if (r0 < r1)
@@ -219,7 +223,7 @@ function getDirectionFacing(sourceHexId, targetHexId)
         else
             facing = 0;
     }
-
+    
     if (r0 == r1)
     {
         if (q0 < q1)
@@ -235,21 +239,41 @@ function getDirectionFacing(sourceHexId, targetHexId)
         else
             facing = 1;
     }
-
+    
     return facing;
 }
 
+const kMoveIneligible = 0x0;
+const kMovePossible   = 0x1;
+const kMoveTurn       = 0x2;
+const kMoveSlipStream = 0x4;
 function isShipMoveEligible(gamestate, sourceHexId, targetHexId, ship_facing)
 {
     let dist = distByHexId(sourceHexId, targetHexId);
     if (dist > 1)
-        return false;
-
+        return kMoveIneligible;
+    
     let direction = getDirectionFacing(sourceHexId, targetHexId);
-    if (Math.abs((direction - ship_facing) % 5) <= 1)
-        return true;
+    switch (ship_facing - direction)
+    {
+    case 0:
+        {
+            return kMovePossible;
+        }
+    case -5:
+    case 5:
+    case -1:
+    case 1:
+        {
+            return kMoveSlipStream|kMoveTurn|kMovePossible;
+        }
+    default:
+        {
+            break;
+        }
+    }
 
-    return false;
+    return kMoveIneligible;
 }
 
 function getShipIndexByHex(gamestate, hex)
@@ -327,14 +351,14 @@ function hexIdToString(hexId)
     let q0 = hexId<<16>>16;
     let r0 = hexId>>16;
     let s0 = -q0 - q0;
-
+    
     let p = function(x,p) {
         return x.toString().padStart(p, ' ');
     };
     let p2 = function(x) {
         return p(x,2);
     };
-
+    
     return `(q:${p2(q0)},r:${p2(r0)},s:${p2(s0)},h:${p(hexId,6)})`;
 }
 
@@ -380,13 +404,16 @@ function onHexClick(gamestate, hex, event)
                 let index = getShipIndexById(gamestate, g_UIState.selectedShip);
                 let ship_facing = gamestate.shipYard.facings[index];
                 let previousHexId = gamestate.shipYard.hexids[index];
-                if (isShipMoveEligible(gamestate, previousHexId, hex.id, ship_facing))
+                const eligibility = isShipMoveEligible(gamestate, previousHexId, hex.id, ship_facing);
+                if (eligibility != kMoveIneligible)
                 {
                     if (g_UIState.selectedHex)
                         g_UIState.selectedHex.setAttribute("class", "hex-unselected");
                     g_UIState.selectedHex = hex;
                     hex.setAttribute("class", "hex-selected");
                 }
+                
+                refreshUi();
             }
             
             break;
@@ -424,7 +451,7 @@ function init()
         
         let num_cols = 10;
         let num_rows = 10;
-
+        
         const vy = 87;
         
         for (let r=-num_rows,nr=num_rows; r<nr; ++r)
@@ -457,28 +484,28 @@ function init()
                 {
                     let isDragging = false;
                     let startX, startY, currentX, currentY;
-
+                    
                     svg.addEventListener('mousedown', (e) => {
                         isDragging = true;
                         startX = e.clientX - svg.getBoundingClientRect().left;
                         startY = e.clientY - svg.getBoundingClientRect().top;
                     });
-
+                    
                     svg.addEventListener('mousemove', (e) => {
                         if (isDragging) {
                             e.preventDefault();
                             currentX = e.clientX - svg.getBoundingClientRect().left;
                             currentY = e.clientY - svg.getBoundingClientRect().top;
-
+                            
                             const deltaX = currentX - startX;
                             const deltaY = currentY - startY;
                             
                             g_UIState.viewport = { x: -deltaX, y: -deltaY, width: 1000, height: 1000 };
-
+                            
                             refreshUi();
                         }
                     });
-
+                    
                     window.addEventListener('mouseup', () => {
                         isDragging = false;
                     });
@@ -489,7 +516,7 @@ function init()
                 
                 polygon.setAttribute("id",((rp<<16) | (qp&0xffff)));
                 g.setAttribute("id",      ((rp<<16) | (qp&0xffff)));
-
+                
                 if (g_Debug)
                 {
                     let label = document.createElementNS(svgns, "text");
@@ -497,13 +524,13 @@ function init()
                     label.setAttributeNS(null, "y","-40");
                     label.setAttributeNS(null, "font-size","40");
                     label.setAttributeNS(null, "fill","blue");
-
+                    
                     let label_east = document.createElementNS(svgns, "text");
                     label_east.setAttributeNS(null, "x","20");
                     label_east.setAttributeNS(null, "y","15");
                     label_east.setAttributeNS(null, "font-size","40");
                     label_east.setAttributeNS(null, "fill","white");
-
+                    
                     let label_south = document.createElementNS(svgns, "text");
                     label_south.setAttributeNS(null, "x","-25");
                     label_south.setAttributeNS(null, "y","75");
@@ -522,7 +549,7 @@ function init()
                 map.appendChild(g);
                 xoffset += 306;
             }
-
+            
             yoffset += 88;
             xoffset = start_xoffset;
         }
@@ -535,7 +562,7 @@ function init()
     g_GameState.turn = 1;
     g_GameState.impulse = 1;
     g_GameState.subimpulse = 1;
-
+    
     updateGameStatus(g_GameState);
 }
 
