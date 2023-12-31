@@ -2,7 +2,6 @@ body, html {
     margin: 0;
     padding: 0;
     height: 100%;
-    background-color: gray;
 }
 
 #status-line {
@@ -33,15 +32,17 @@ body, html {
 .hex-selected {
     fill: gray;
     stroke: red;
-    stroke-width:20;
+    stroke-width:6;
 }
 
 .hex-selected-secondary {
     fill: #972020;
     stroke: black;
+    stroke-width:3;
 }
 
 .hex-unselected {
     fill: gray;
     stroke: black;
+    stroke-width:3;
 }

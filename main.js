@@ -424,28 +424,30 @@ function init()
         
         let num_cols = 10;
         let num_rows = 10;
+
+        const vy = 87;
         
         for (let r=-num_rows,nr=num_rows; r<nr; ++r)
         {
-            var xbias = (r&1) * 150;
+            let xbias = (r&1) * 153;
             
             for (let c=-(num_cols/2-1), nc=(num_cols/2-2); c<=nc; ++c)
             {
                 let points =
                         [
-                            "100,0",
-                            "+50,-87",
-                            "-50,-87",
-                            "-100,-0",
-                            "-50,87",
-                            "+50,87"
+                            " 100,   0",
+                            ` +50, -${vy}`,
+                            ` -50, -${vy}`,
+                            "-100,  -0",
+                            ` -50,  ${vy}`,
+                            ` +50,  ${vy}`
                         ];
                 
                 let g = document.createElementNS(svgns, "g");
                 g.setAttribute("transform","translate("+(xoffset+xbias)+","+yoffset+")");
                 
                 let polygon = document.createElementNS(svgns, "polygon");
-                polygon.setAttribute("points","100,0 50,-87 -50,-87 -100,-0 -50,87 50,87");
+                polygon.setAttribute("points", points.join(' '));
                 polygon.setAttribute("overflow","visible");
                 polygon.setAttribute("class", "hex-unselected");
                 
@@ -518,11 +520,10 @@ function init()
                 }
                 
                 map.appendChild(g);
-                
-                xoffset += 300;
+                xoffset += 306;
             }
-            
-            yoffset += 87;
+
+            yoffset += 88;
             xoffset = start_xoffset;
         }
     }
