@@ -42,7 +42,7 @@ var svgns = "http://www.w3.org/2000/svg";
 
  */
 
-const debugColors = [
+const kDebugColors = [
     '#00ff00',
     '#0033ff',
     '#ff0099',
@@ -374,6 +374,9 @@ function onHexClick(gamestate, hex, event)
             {
                 let shipInstance = gamestate.ships[index];
                 
+                if (g_UIState.selectedHex)
+                    g_UIState.selectedHex.setAttribute("class", "hex-unselected");
+                
                 if (g_UIState.selectedShip)
                     unselectByShip(gamestate, g_UIState.selectedShip);
                 
@@ -428,7 +431,7 @@ function init()
                 const qp = 2*c + (r&1);
                 const rp = (r - (r&1))/2 - c;
                 const id = (rp<<16) | (qp&0xffff);
-
+                
                 let polygon = document.getElementById(id);
                 let g = polygon.parentElement;
                 g.addEventListener('mouseup', (e) =>
@@ -437,13 +440,13 @@ function init()
                                    }, false);
             }
         }
-
+        
         // add map container callbacks
         {
             let isDragging = false;
-            let startX, startY, currentX, currentY;            
-
-            let svg = document.getElementById("map-container");        
+            let startX, startY, currentX, currentY;
+            
+            let svg = document.getElementById("map-container");
             svg.addEventListener('mousedown', (e) => {
                 isDragging = true;
                 startX = e.clientX - svg.getBoundingClientRect().left;
@@ -458,7 +461,7 @@ function init()
                     
                     const deltaX = currentX - startX;
                     const deltaY = currentY - startY;
-
+                    
                     g_UIState.viewport = { x: -deltaX, y: -deltaY, width: 1000, height: 1000 };
                     
                     refreshUi();
@@ -474,7 +477,7 @@ function init()
     g_GameState.turn = 1;
     g_GameState.impulse = 1;
     g_GameState.subimpulse = 1;
-
+    
     updateGameStatus(g_GameState);
 }
 
