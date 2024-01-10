@@ -77,6 +77,13 @@ class Ship
     }
 };
 
+let g_AssetData =
+{
+    shipYard: {
+        id_gen: 1
+    }
+};
+
 let g_GameState =
 {
     turn: 0,
@@ -92,10 +99,7 @@ let g_GameState =
             facing: 0
         }
     ],
-    
-    shipYard: {
-        id_gen: 1
-    }
+    updateShip: null
 };
 
 const g_Debug = false;
@@ -110,25 +114,92 @@ var g_UIState =
     mouse: { x: 0, y: 0 },
     viewport: { x: 0, y: 0, width: 1000, height: 1000 },
     selectedHex: null,
-    selectedShip: null,
     events: 0,
     tools_mode: "place"
 };
 
 var g_Scale = 1;
 
+function diff(a, b)
+{
+    if (a === b)
+        return {};
+    
+    let cloneIt = function(v) {
+        if (v == null || typeof v != 'object')
+            return v;
+        
+        let isArray = Array.isArray(v);
+        
+        let obj = isArray ? [] : {};
+        if (!isArray) {
+            // handles function, etc
+            Object.assign({}, v);
+        }
+        
+        for (var i in v) {
+            obj[i] = cloneIt(v[i]);
+        }
+        
+        return obj;
+    };
+    
+    // different types or array compared to non-array
+    if (typeof a != typeof b || Array.isArray(a) != Array.isArray(b)) {
+        return [cloneIt(a), cloneIt(b)];
+    }
+    
+    // different scalars (no cloning needed)
+    if (typeof a != 'object' && a !== b) {
+        return [a, b];
+    }
+
+    // one is null, the other isn't
+    // (if they were both null, the '===' comparison
+    // above would not have allowed us here)
+    if (a == null || b == null) {
+        return [cloneIt(a), cloneIt(b)]; 
+    }
+    
+    // We have two objects or two arrays to compare.
+    let isArray = Array.isArray(a);
+    
+    let left = isArray ? [] : {};
+    let right = isArray ? [] : {};
+    
+    for (var i in a) {
+        if (!b.hasOwnProperty(i)) {
+            left[i] = cloneIt(a[i]);
+        } else {
+            let sub_diff = diff(a[i], b[i]);
+            if (isArray || sub_diff) { 
+                left[i] = sub_diff ? cloneIt(sub_diff[0]) : null;
+                right[i] = sub_diff ? cloneIt(sub_diff[1]) : null;
+            }
+        }
+    }
+    
+    for (let i in b) {
+        if (!a.hasOwnProperty(i)) {
+            right[i] = cloneIt(b[i]);
+        }
+    }
+    
+    return [ left, right ];
+};
+
 function refreshUi()
 {
     window.requestAnimationFrame(draw);
 }
 
-function uiUpdateButtons(buttonLabel)
+function uiUpdateButtons(patch)
 {
 }
 
 function updateStatusLine(value)
 {
-    var status_line = document.getElementById("status-line");
+    let status_line = document.getElementById("status-line");
     status_line.textContent = value;
 }
 
@@ -175,7 +246,7 @@ function updateGameStatus(state)
     case "move":
         {
             let status = " MOVE: select ship";
-            if (g_UIState.selectedShip)
+            if (state.updateShip)
                 status = " MOVE: select next tile and orientation";
             updateStatusLine2(prefix, status);
             
@@ -198,9 +269,15 @@ function updateGameStatus(state)
 
 function addShip(gamestate, hex, facing)
 {
+    // add simulation
+    let id = g_AssetData.shipYard.id_gen++;
+    let shipInstance = new Ship(id, 'ncc1701', 'heavy cruiser', hex.id, facing);
+    gamestate.ships.push(shipInstance);
+    
     // add ui
     let image = document.createElementNS(svgns, "image");
     image.setAttributeNS("http://www.w3.org/1999/xlink", "href", "NCC1701.png");
+    image.setAttribute("id", id);
     image.setAttribute("width",200);
     image.setAttribute("height",200);
     image.setAttribute("x",-100);
@@ -209,10 +286,6 @@ function addShip(gamestate, hex, facing)
     
     hex.parentElement.appendChild(image);
     
-    // add simulation
-    let id = gamestate.shipYard.id_gen++;
-    let shipInstance = new Ship(id, 'ncc1701', 'heavy cruiser', hex.id, facing);
-    gamestate.ships.push(shipInstance);
 }
 
 function getDirectionFacing(sourceHexId, targetHexId)
@@ -372,27 +445,31 @@ function onHexClick(gamestate, hex, event)
             let index = getShipIndexByHex(gamestate, hex);
             if (index >= 0)
             {
-                let shipInstance = gamestate.ships[index];
-                
                 if (g_UIState.selectedHex)
+                {
                     g_UIState.selectedHex.setAttribute("class", "hex-unselected");
+                    g_UIState.selectedHex = null;
+                }
                 
-                if (g_UIState.selectedShip)
-                    unselectByShip(gamestate, g_UIState.selectedShip);
-                
-                g_UIState.selectedShip = shipInstance.id;
-                shipInstance.hexid = hex.id;
-                
-                g_UIState.selectedHex = null;
-                
-                hex.setAttribute("class", "hex-selected-secondary");
+                if (gamestate.updateShip)
+                {
+                    gamestate.updateShip.facing = gamestate.updateShip.facing + 1;
+                    gamestate.updateShip.facing %= 6;
+                }
+                else
+                {
+                    gamestate.updateShip = JSON.parse(JSON.stringify(gamestate.ships[index]));
+                    gamestate.updateShip.hexid = hex.id;
+
+                    hex.setAttribute("class", "hex-selected-secondary");
+                }
                 
                 refreshUi();
             }
-            else if (g_UIState.selectedShip)
+            else if (gamestate.updateShip)
             {
                 let index = getShipIndexById(gamestate, g_UIState.selectedShip);
-                let shipInstance = gamestate.ships[index];
+                let shipInstance = gamestate.updateShip;
                 
                 let shipFacing = shipInstance.facing;
                 let previousHexId = shipInstance.hexid;
@@ -403,6 +480,25 @@ function onHexClick(gamestate, hex, event)
                         g_UIState.selectedHex.setAttribute("class", "hex-unselected");
                     g_UIState.selectedHex = hex;
                     hex.setAttribute("class", "hex-selected");
+                    
+                    /*
+                    let patch = [];
+                    if (kMoveSlipStream & eligibility)
+                    {
+                        let shipSlipStream = JSON.parse(JSON.stringify(shipInstance));
+                        shipSlipStream.hexid = hex.id;
+                        patch.push(['SlipStream', diff(shipInstance, shipSlipStream)]);
+                    }
+                    if (kMoveTurn & eligibility)
+                    {
+                        let shipSlipStream = JSON.parse(JSON.stringify(shipInstance));
+                        shipSlipStream.hexid = hex.id;
+                        patch.push(['SlipStream', diff(shipInstance, shipSlipStream)]);
+                    }
+                    
+                    let delta = diff(shipInstance, shipCopy);
+                    console.log(JSON.stringify(delta));
+                     */
                 }
                 
                 refreshUi();
@@ -490,4 +586,13 @@ function draw()
     svg.setAttribute('viewBox', `${v.x} ${v.y} ${v.width} ${v.height}`);
     
     updateGameStatus(g_GameState);
+
+    if (g_GameState.updateShip)
+    {
+        let ship = g_GameState.updateShip;
+        let shipId = ship.id;
+        let shipImage = document.getElementById(shipId);
+        
+        shipImage.setAttribute("transform",`rotate(${60 * ship.facing} 0 0)`);
+    }
 }
