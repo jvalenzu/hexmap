@@ -1,4 +1,4 @@
-var svgns = "http://www.w3.org/2000/svg";
+const kSvgNs = "http://www.w3.org/2000/svg";
 
 // jiv todo
 // * need image dimension information associated ship pieces like NCC1701.png in order to
@@ -84,8 +84,9 @@ let g_AssetData =
     }
 };
 
-let g_GameState =
+let g_LocalGameState =
 {
+    snapshot: {},
     turn: 0,
     impulse: 0,
     subimpulse: 0,
@@ -115,7 +116,7 @@ var g_UIState =
     viewport: { x: 0, y: 0, width: 1000, height: 1000 },
     selectedHex: null,
     events: 0,
-    tools_mode: "place"
+    tools_mode: "move"
 };
 
 var g_Scale = 1;
@@ -153,7 +154,7 @@ function diff(a, b)
     if (typeof a != 'object' && a !== b) {
         return [a, b];
     }
-
+    
     // one is null, the other isn't
     // (if they were both null, the '===' comparison
     // above would not have allowed us here)
@@ -186,6 +187,137 @@ function diff(a, b)
     }
     
     return [ left, right ];
+};
+
+function numKeys(a)
+{
+    let count = 0;
+    for (let key in a)
+        count++;
+    return count;
+}
+
+function keysPresentInFirstButNotSecond(a, b)
+{
+    let ret = [];
+    for (let key in a)
+    {
+        if (!(key in b))
+        {
+            ret.push(key);
+        }
+    }
+    return ret;
+}
+
+function keysPresentInBoth(a, b)
+{
+    let s = {};
+    
+    for (let key in a)
+        s[key] = 1;
+
+    let ret = [];
+    for (let key in b)
+    {
+        if (key in s)
+            ret.push(key);
+    }
+    return ret;
+}
+
+function doObjectsDiffer(a, b)
+{
+    let is_arraya = Array.isArray(a);
+    let is_arrayb = Array.isArray(b);
+    if (is_arraya != is_arrayb)
+        return true;
+    
+    if (is_arraya && is_arrayb)
+    {
+        let lengtha = a.length;
+        let lengthb = b.length;
+        
+        if (lengtha != lengthb)
+            return true;
+        
+        for (let i=0,ni=a.length; i<ni; ++i)
+        {
+            let  element_differs = doObjectsDiffer(a[i], b[i]);
+            if (element_differs)
+                return true;
+        }
+        
+        return false;
+    }
+    else
+    {
+        let is_objecta = typeof a === 'object';
+        let is_objectb = typeof b === 'object';
+        
+        if (is_objecta != is_objectb)
+            return true;
+        
+        if (is_objecta && is_objectb)
+        {
+            for (let key in a)
+            {
+                let value_differs = doObjectsDiffer(a[key], b[key]);
+                if (value_differs)
+                    return true;
+            }
+            
+            for (let key in b)
+            {
+                let value_differs = doObjectsDiffer(a[key], b[key]);
+                if (value_differs)
+                    return true;
+            }
+            
+            return false;
+        }
+        else
+        {
+            // simple case
+            if (a != b)
+                return true;
+            
+            return false;
+        }
+    }
+}
+
+function generateDelta(a, b)
+{
+    if (a === b)
+        return {};
+
+    let ret = {};
+
+    let to_add = keysPresentInFirstButNotSecond(b, a);
+    let to_remove = keysPresentInFirstButNotSecond(a, b);
+    let to_test = keysPresentInBoth(a, b);
+
+    for (let i=0,ni=to_add.length; i<ni; ++i)
+    {
+        let key = to_add[i];
+        ret[key] = b[key];
+    }
+
+    for (let i=0,ni=to_remove.length; i<ni; ++i)
+    {
+        ret[to_remove[i]] = null;
+    }
+
+    for (let i=0,ni=to_test.length; i<ni; ++i)
+    {
+        let key = to_test[i];
+        let objectsDiffer = doObjectsDiffer(a[key], b[key]);
+        if (objectsDiffer)
+            ret[key] = b[key]; // jiv deep copy?
+    }
+    
+    return ret;
 };
 
 function refreshUi()
@@ -275,7 +407,7 @@ function addShip(gamestate, hex, facing)
     gamestate.ships.push(shipInstance);
     
     // add ui
-    let image = document.createElementNS(svgns, "image");
+    let image = document.createElementNS(kSvgNs, "image");
     image.setAttributeNS("http://www.w3.org/1999/xlink", "href", "NCC1701.png");
     image.setAttribute("id", id);
     image.setAttribute("width",200);
@@ -286,6 +418,22 @@ function addShip(gamestate, hex, facing)
     
     hex.parentElement.appendChild(image);
     
+}
+
+// take a game state object from the server and apply it
+function evaluateGameState(serverGameState)
+{
+    let delta = generateDelta(g_LocalGameState.snapshot, serverGameState);
+    
+    for (let i=0,ni=delta.ships.length; i<ni; ++i)
+    {
+        let shipPrius = delta.ships[i];
+        let hex = document.getElementById(shipPrius.hex_id);
+        
+        addShip(g_LocalGameState, hex, shipPrius.facing);
+    }
+
+    g_LocalGameState.snapshot = serverGameState;
 }
 
 function getDirectionFacing(sourceHexId, targetHexId)
@@ -460,7 +608,7 @@ function onHexClick(gamestate, hex, event)
                 {
                     gamestate.updateShip = JSON.parse(JSON.stringify(gamestate.ships[index]));
                     gamestate.updateShip.hexid = hex.id;
-
+                    
                     hex.setAttribute("class", "hex-selected-secondary");
                 }
                 
@@ -513,7 +661,7 @@ function onHexClick(gamestate, hex, event)
     }
 }
 
-function init()
+function addCallbacks()
 {
     {
         let num_cols = 10;
@@ -532,7 +680,7 @@ function init()
                 let g = polygon.parentElement;
                 g.addEventListener('mouseup', (e) =>
                                    {
-                                       onHexClick(g_GameState, polygon, e);
+                                       onHexClick(g_LocalGameState, polygon, e);
                                    }, false);
             }
         }
@@ -570,14 +718,12 @@ function init()
         }
     }
     
-    g_GameState.turn = 1;
-    g_GameState.impulse = 1;
-    g_GameState.subimpulse = 1;
+    g_LocalGameState.turn = 1;
+    g_LocalGameState.impulse = 1;
+    g_LocalGameState.subimpulse = 1;
     
-    updateGameStatus(g_GameState);
+    updateGameStatus(g_LocalGameState);
 }
-
-init();
 
 function draw()
 {
@@ -585,14 +731,57 @@ function draw()
     let v = g_UIState.viewport;
     svg.setAttribute('viewBox', `${v.x} ${v.y} ${v.width} ${v.height}`);
     
-    updateGameStatus(g_GameState);
-
-    if (g_GameState.updateShip)
+    updateGameStatus(g_LocalGameState);
+    
+    if (g_LocalGameState.updateShip)
     {
-        let ship = g_GameState.updateShip;
+        let ship = g_LocalGameState.updateShip;
         let shipId = ship.id;
         let shipImage = document.getElementById(shipId);
         
         shipImage.setAttribute("transform",`rotate(${60 * ship.facing} 0 0)`);
     }
 }
+
+function init()
+{
+    const kUrl = "http://127.0.0.1:3000/getstate";
+    let xhr = new XMLHttpRequest();
+    xhr.open("POST", kUrl, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onreadystatechange = () => {
+        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200)
+        {
+            let gamestate = JSON.parse(xhr.response).game_state;
+            evaluateGameState(gamestate);
+            addCallbacks();
+        }
+    };
+    xhr.send(JSON.stringify({
+        game_id: 1
+    }));    
+
+}
+
+init();
+
+// function test()
+// {
+//     let empty = { };
+//     let client0 = { a: 0, b: 1, c: [ "hello" ], d: [ "world" ]  };
+//     let server0 = { b: 1, c: [ "hello" ], d: [ "sailor" ] };
+//     let client1 = [ 1, 2, 3, 4 ];
+//     let server1 = [ 1, 2, 3, 4 ];
+//     let client2 = [ 1, 2, 3, 4 ];
+//     let server2 = [ 1, 2, 3, 5 ];
+// 
+//     let delta0 = generateDelta(client0, server0);
+//     console.log(delta0);
+// 
+//     let delta1 = generateDelta(client1, server1);
+//     console.log(delta1);
+// 
+//     let delta2 = generateDelta(client2, server2);
+//     console.log(delta2);
+// }
+// test();
