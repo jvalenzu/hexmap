@@ -109,6 +109,7 @@ const g_Debug = false;
 // * default
 // * place
 // * move
+// * move-finalize
 
 var g_UIState =
 {
@@ -116,78 +117,16 @@ var g_UIState =
     viewport: { x: 0, y: 0, width: 1000, height: 1000 },
     selectedHex: null,
     events: 0,
-    tools_mode: "move"
+    tools_mode: "move",
+    patch: null
 };
 
 var g_Scale = 1;
 
-function diff(a, b)
+function serverMoveShip(a)
 {
-    if (a === b)
-        return {};
-    
-    let cloneIt = function(v) {
-        if (v == null || typeof v != 'object')
-            return v;
-        
-        let isArray = Array.isArray(v);
-        
-        let obj = isArray ? [] : {};
-        if (!isArray) {
-            // handles function, etc
-            Object.assign({}, v);
-        }
-        
-        for (var i in v) {
-            obj[i] = cloneIt(v[i]);
-        }
-        
-        return obj;
-    };
-    
-    // different types or array compared to non-array
-    if (typeof a != typeof b || Array.isArray(a) != Array.isArray(b)) {
-        return [cloneIt(a), cloneIt(b)];
-    }
-    
-    // different scalars (no cloning needed)
-    if (typeof a != 'object' && a !== b) {
-        return [a, b];
-    }
-    
-    // one is null, the other isn't
-    // (if they were both null, the '===' comparison
-    // above would not have allowed us here)
-    if (a == null || b == null) {
-        return [cloneIt(a), cloneIt(b)]; 
-    }
-    
-    // We have two objects or two arrays to compare.
-    let isArray = Array.isArray(a);
-    
-    let left = isArray ? [] : {};
-    let right = isArray ? [] : {};
-    
-    for (var i in a) {
-        if (!b.hasOwnProperty(i)) {
-            left[i] = cloneIt(a[i]);
-        } else {
-            let sub_diff = diff(a[i], b[i]);
-            if (isArray || sub_diff) { 
-                left[i] = sub_diff ? cloneIt(sub_diff[0]) : null;
-                right[i] = sub_diff ? cloneIt(sub_diff[1]) : null;
-            }
-        }
-    }
-    
-    for (let i in b) {
-        if (!a.hasOwnProperty(i)) {
-            right[i] = cloneIt(b[i]);
-        }
-    }
-    
-    return [ left, right ];
-};
+    console.log(`serverMoveShip ${a}`);
+}
 
 function numKeys(a)
 {
@@ -216,7 +155,7 @@ function keysPresentInBoth(a, b)
     
     for (let key in a)
         s[key] = 1;
-
+    
     let ret = [];
     for (let key in b)
     {
@@ -287,35 +226,41 @@ function doObjectsDiffer(a, b)
     }
 }
 
+function deepCopy(a, b)
+{
+    return JSON.parse(JSON.stringify(a));
+}
+
 function generateDelta(a, b)
 {
     if (a === b)
         return {};
-
-    let ret = {};
-
-    let to_add = keysPresentInFirstButNotSecond(b, a);
-    let to_remove = keysPresentInFirstButNotSecond(a, b);
+    
     let to_test = keysPresentInBoth(a, b);
-
-    for (let i=0,ni=to_add.length; i<ni; ++i)
-    {
-        let key = to_add[i];
-        ret[key] = b[key];
-    }
-
-    for (let i=0,ni=to_remove.length; i<ni; ++i)
-    {
-        ret[to_remove[i]] = null;
-    }
-
+    let to_mutate = [];
+    
     for (let i=0,ni=to_test.length; i<ni; ++i)
     {
         let key = to_test[i];
         let objectsDiffer = doObjectsDiffer(a[key], b[key]);
         if (objectsDiffer)
-            ret[key] = b[key]; // jiv deep copy?
+            to_mutate[key] = deepCopy(b[key]);
     }
+    
+    let ret = {
+        add: []
+    };
+    let to_add = keysPresentInFirstButNotSecond(b, a);
+    let to_delete = keysPresentInFirstButNotSecond(a, b);
+    
+    for (let i=0,ni=to_add.length; i<ni; ++i)
+    {
+        let key = to_add[i];
+        ret.add[key] = b[key];
+    }
+    
+    ret.delete = to_delete;
+    ret.change = to_mutate;
     
     return ret;
 };
@@ -327,6 +272,7 @@ function refreshUi()
 
 function uiUpdateButtons(patch)
 {
+    g_UIState.patch = patch;
 }
 
 function updateStatusLine(value)
@@ -366,6 +312,41 @@ function updateStatusLine2(value0, value1)
     statusLine.appendChild(divStatus);
 }
 
+function updateStatusLines(value0, patches)
+{
+    let statusLine = document.getElementById("status-line");
+    statusLine.innerHTML = "";
+    
+    let divLeft = document.createElement("div");
+    divLeft.setAttribute("style", "float: left; padding-right: 89px;");
+    divLeft.appendChild(document.createTextNode(value0));
+    
+    let divRight = document.createElement("div");
+    divRight.setAttribute("style", "float: right;");
+    
+    let buttons = [];
+    for (let i=0,ni=patches.length; i<ni; ++i)
+    {
+        let patch = patches[i];
+        let label = patch.shift();
+        let func = patch.shift();
+        let button = document.createElement("button");
+
+        button.setAttribute("id", label);
+        button.appendChild(document.createTextNode(label));
+        button.addEventListener("click", () => { func(...patch); });
+        
+        buttons.push(button);
+    }
+    
+    statusLine.setAttribute("style", "height: 40px;");    
+    statusLine.appendChild(divLeft);
+    statusLine.appendChild(divRight);
+    
+    for (let i=0,ni=buttons.length; i<ni; ++i)
+        divRight.appendChild(buttons[i]);
+}
+
 function updateGameStatus(state)
 {
     let turn = state.turn;
@@ -380,7 +361,14 @@ function updateGameStatus(state)
             let status = " MOVE: select ship";
             if (state.updateShip)
                 status = " MOVE: select next tile and orientation";
+            
             updateStatusLine2(prefix, status);
+            
+            break;
+        }
+    case "move-finalize":
+        {
+            updateStatusLines(prefix, g_UIState.patch);
             
             break;
         }
@@ -425,14 +413,14 @@ function evaluateGameState(serverGameState)
 {
     let delta = generateDelta(g_LocalGameState.snapshot, serverGameState);
     
-    for (let i=0,ni=delta.ships.length; i<ni; ++i)
+    for (let i=0,ni=delta.add.ships.length; i<ni; ++i)
     {
-        let shipPrius = delta.ships[i];
+        let shipPrius = delta.add.ships[i];
         let hex = document.getElementById(shipPrius.hex_id);
         
         addShip(g_LocalGameState, hex, shipPrius.facing);
     }
-
+    
     g_LocalGameState.snapshot = serverGameState;
 }
 
@@ -504,7 +492,7 @@ function isShipMoveEligible(gamestate, sourceHexId, targetHexId, ship_facing)
             break;
         }
     }
-
+    
     return kMoveIneligible;
 }
 
@@ -629,24 +617,22 @@ function onHexClick(gamestate, hex, event)
                     g_UIState.selectedHex = hex;
                     hex.setAttribute("class", "hex-selected");
                     
-                    /*
                     let patch = [];
                     if (kMoveSlipStream & eligibility)
                     {
-                        let shipSlipStream = JSON.parse(JSON.stringify(shipInstance));
+                        let shipSlipStream = deepCopy(shipInstance);
                         shipSlipStream.hexid = hex.id;
-                        patch.push(['SlipStream', diff(shipInstance, shipSlipStream)]);
+                        patch.push(['SlipStream', serverMoveShip, shipSlipStream]);;
                     }
                     if (kMoveTurn & eligibility)
                     {
-                        let shipSlipStream = JSON.parse(JSON.stringify(shipInstance));
+                        let shipSlipStream = deepCopy(shipInstance);
                         shipSlipStream.hexid = hex.id;
-                        patch.push(['SlipStream', diff(shipInstance, shipSlipStream)]);
+                        patch.push(['Commit', serverMoveShip, shipSlipStream]);
                     }
                     
-                    let delta = diff(shipInstance, shipCopy);
-                    console.log(JSON.stringify(delta));
-                     */
+                    g_UIState.tools_mode = "move-finalize";
+                    uiUpdateButtons(patch);
                 }
                 
                 refreshUi();

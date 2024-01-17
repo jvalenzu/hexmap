@@ -33,16 +33,19 @@ body, html {
     fill: gray;
     stroke: red;
     stroke-width:6;
+    overflow: visible;
 }
 
 .hex-selected-secondary {
     fill: #972020;
     stroke: black;
     stroke-width:3;
+    overflow: visible;
 }
 
 .hex-unselected {
     fill: gray;
     stroke: black;
     stroke-width:3;
+    overflow: visible;
 }
