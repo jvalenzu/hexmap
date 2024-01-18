@@ -15,7 +15,6 @@ const kSvgNs = "http://www.w3.org/2000/svg";
 //   
 // * orient ships
 // * move ship data into state
-// * resize destroys all ship instances: replace ship instances on redraw
 // * client/server logic
 //   * seperate out into client gathers input, server applies operations on data, saves to undo stack
 
