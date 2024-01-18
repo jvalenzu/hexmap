@@ -26,9 +26,10 @@ class Game
 
 class Ship
 {
-    constructor(id, player_id, hex_id, facing)
+    constructor(game_id, ship_id, player_id, hex_id, facing)
     {
-        this.game_id = id;
+        this.game_id = game_id;
+        this.ship_id = ship_id;
         this.player_id = player_id;
         this.hex_id = hex_id;
         this.facing = facing;
@@ -53,6 +54,60 @@ let s_games = [];
 let s_ship_id = 1;
 let s_ships = [];
 
+function generateState(game_id) {
+    let game = null;
+
+    for (let i=0, ni=s_games.length; i<ni; ++i)
+    {
+        if (s_games[i].game_id == game_id)
+            game = s_games[i];
+    }
+    
+    let players = [];
+    let ships = [];
+    
+    if (game)
+    {
+        for (let i=0, ni=s_players.length; i<ni; ++i)
+        {
+            let player_id = s_players[i].player_id;
+            if (game.player0 == player_id || game.player1 == player_id || game.player2 == player_id || game.player3 == player_id)
+                players.push(s_players[i]);
+        }
+        
+        for (let i=0, ni=s_ships.length; i<ni; ++i)
+        {
+            let ship = s_ships[i];
+            if (ship.game_id == game_id)
+                ships.push(ship);
+        }
+    }
+    
+    return {
+        players: players,
+        ships: ships
+    };
+}
+
+function generateDelta(add_players, add_ships,
+                       remove_players, remove_ships, 
+                       change_players, change_ships) {
+    return {
+        add: {
+            players: add_players,
+            ships: add_ships
+        },
+        remove: {
+            players: remove_players,
+            ships: remove_ships
+        },
+        change: {
+            players: change_players,
+            ships: change_ships
+        }
+    };
+}
+
 function newPlayer(name, player_id)
 {
     let player = new Player(name, player_id);
@@ -65,9 +120,9 @@ function newGame(id, player0, player1, player2, player3)
     s_games.push(game);
 }
 
-function newShip(id, player_id, hex_id, facing)
+function newShip(game_id, ship_id, player_id, hex_id, facing)
 {
-    let ship = new Ship(id, player_id, hex_id, facing);
+    let ship = new Ship(game_id, ship_id, player_id, hex_id, facing);
     s_ships.push(ship);
 }
 
@@ -92,46 +147,36 @@ app.post("/newship", (req, res, arg) => {
     let hex_id = req.body.hex_id;
     let facing = req.facing;
     
-    newShip(game_id, player_id, hex_id, facing);
+    newShip(game_id, ship_id, player_id, hex_id, facing);
     
     res.json({ "ship_id": ship_id});
 });
 
+// move ship
+app.post("/moveship", (req, res, arg) => {
+    let data = {
+        "status": "error"
+    };
+    
+    let game_id = req.body.game_id;
+    for (let i=0, ni=s_ships.length; i<ni; ++i)
+    {
+        let ship = s_ships[i];
+        if (ship.game_id == game_id) {
+            ship.hex_id = req.body.hex_id;
+            ship.facing = req.body.facing;
+            
+            data.return = generateDelta(null, null, null, null, null, [ ship ]);
+            data.status = "success";
+        }
+    }
+    
+    res.json(data);
+});
 // 
 app.post("/getstate", (req, res, arg) => {
     let game_id = req.body.game_id;
-    
-    let game = null;
-    for (let i=0, ni=s_games.length; i<ni; ++i)
-    {
-        if (s_games[i].game_id == game_id)
-            game = s_games[i];
-    }
-    
-    let players = [];
-    let ships = [];
-    
-    if (game)
-    {
-        for (let i=0, ni=s_players.length; i<ni; ++i)
-        {
-            let player_id = s_players[i].player_id;
-            if (game.player0 == player_id || game.player1 == player_id || game.player2 == player_id || game.player3 == player_id)
-                players.push(s_players[i]);
-        }
-        
-        for (let i=0, ni=s_ships.length; i<ni; ++i)
-        {
-            if (s_ships[i].game_id == game_id)
-                ships.push(s_ships[i]);
-        }
-    }
-    
-    let game_state = {
-        players: players,
-        ships: ships
-    };
-    
+    let game_state = generateState(game_id);
     res.json({ "game_state": game_state});
 });
 
@@ -142,5 +187,5 @@ newPlayer("jvalenzu", debug_player_id0);
 newPlayer("ignacio", debug_player_id1);
 
 let debug_game_id = s_game_id++;
-newGame(debug_game_id, debug_player_id0, debug_player_id1);
-newShip(debug_game_id, debug_player_id0, 196606, kFacingN);
+newGame(debug_game_id, s_ship_id++, debug_player_id0, debug_player_id1);
+newShip(debug_game_id, s_ship_id++, debug_player_id0, 196606, kFacingN);

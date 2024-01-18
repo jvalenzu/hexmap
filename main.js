@@ -86,6 +86,7 @@ let g_AssetData =
 
 let g_LocalGameState =
 {
+    game_id: 1,
     snapshot: {},
     turn: 0,
     impulse: 0,
@@ -116,6 +117,7 @@ var g_UIState =
     mouse: { x: 0, y: 0 },
     viewport: { x: 0, y: 0, width: 1000, height: 1000 },
     selectedHex: null,
+    altSelectedHex: null,
     events: 0,
     tools_mode: "move",
     patch: null
@@ -123,9 +125,87 @@ var g_UIState =
 
 var g_Scale = 1;
 
-function serverMoveShip(a)
+function evaluateDeltaState(gamestate, deltaState)
 {
-    console.log(`serverMoveShip ${a}`);
+    if ("ships" in deltaState.add && deltaState.add.ships)
+    {
+        for (let i=0,ni=deltaState.add.ships.length; i<ni; ++i)
+        {
+            let shipPrius = deltaState.add.ships[i];
+            let hex = document.getElementById(shipPrius.hex_id);
+            addLocalShip(g_LocalGameState, shipPrius.ship_id, shipPrius.facing, hex);
+        }
+    }
+    
+    if ("ships" in deltaState.remove && deltaState.remove.ships)
+    {
+        for (let i=0,ni=deltaState.remove.ships.length; i<ni; ++i)
+        {
+            /*
+             jiv fixme
+             let shipPrius = deltaState.remove.ships[i];
+             let hex = document.getElementById(shipPrius.hex_id);
+             addLocalShip(g_LocalGameState, hex, shipPrius.facing);
+             */
+        }
+    }
+    
+    if ("ships" in deltaState.change && deltaState.change.ships)
+    {    
+        for (let i=0,ni=deltaState.change.ships.length; i<ni; ++i)
+        {
+            let shipPrius = deltaState.change.ships[i];
+            let newHexId = shipPrius.hex_id;
+            
+            moveLocalShip(g_LocalGameState, shipPrius);
+        }
+    }
+}
+
+// take a game state object from the server and apply it
+function evaluateGameState(localGameState, serverGameState)
+{
+    let delta = generateDelta(localGameState.snapshot, serverGameState);
+    evaluateDeltaState(localGameState, delta);
+    localGameState.snapshot = serverGameState;
+}
+
+function serverCall(url, data, callback)
+{
+    const kUrl = "http://127.0.0.1:3000"+url;
+    let xhr = new XMLHttpRequest();
+    xhr.open("POST", kUrl, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onreadystatechange = () => {
+        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200)
+        {
+            let response = JSON.parse(xhr.response);
+            callback(response);
+        }
+    };
+    
+    let params = deepCopy(data);
+    params.game_id = g_LocalGameState.game_id;
+    xhr.send(JSON.stringify(params));
+}
+
+function serverMoveShip(data)
+{
+    serverCall("/moveship", data,
+               (response) =>
+               {
+                   if (response.status != "error")
+                   {
+                       evaluateDeltaState(g_LocalGameState, response.return);
+                   }
+                   
+                   g_UIState.tools_mode = "default";
+                   
+                   // clean up ui state
+                   uiClearSelectedHex(g_UIState);
+                   
+                   refreshUi();
+               });
 }
 
 function numKeys(a)
@@ -251,7 +331,7 @@ function generateDelta(a, b)
         add: []
     };
     let to_add = keysPresentInFirstButNotSecond(b, a);
-    let to_delete = keysPresentInFirstButNotSecond(a, b);
+    let to_remove = keysPresentInFirstButNotSecond(a, b);
     
     for (let i=0,ni=to_add.length; i<ni; ++i)
     {
@@ -259,7 +339,7 @@ function generateDelta(a, b)
         ret.add[key] = b[key];
     }
     
-    ret.delete = to_delete;
+    ret.remove = to_remove;
     ret.change = to_mutate;
     
     return ret;
@@ -268,6 +348,21 @@ function generateDelta(a, b)
 function refreshUi()
 {
     window.requestAnimationFrame(draw);
+}
+
+function uiClearSelectedHex(uistate)
+{
+    if (uistate.selectedHex)
+    {
+        uistate.selectedHex.setAttribute("class", "hex-unselected");
+        uistate.selectedHex = null;
+    }
+    
+    if (uistate.altSelectedHex)
+    {
+        uistate.altSelectedHex.setAttribute("class", "hex-unselected");
+        uistate.altSelectedHex = null;
+    }
 }
 
 function uiUpdateButtons(patch)
@@ -331,7 +426,7 @@ function updateStatusLines(value0, patches)
         let label = patch.shift();
         let func = patch.shift();
         let button = document.createElement("button");
-
+        
         button.setAttribute("id", label);
         button.appendChild(document.createTextNode(label));
         button.addEventListener("click", () => { func(...patch); });
@@ -387,17 +482,16 @@ function updateGameStatus(state)
     }
 }
 
-function addShip(gamestate, hex, facing)
+function addLocalShip(gamestate, ship_id, facing, hex)
 {
     // add simulation
-    let id = g_AssetData.shipYard.id_gen++;
-    let shipInstance = new Ship(id, 'ncc1701', 'heavy cruiser', hex.id, facing);
+    let shipInstance = new Ship(ship_id, 'ncc1701', 'heavy cruiser', hex.id, facing);
     gamestate.ships.push(shipInstance);
     
     // add ui
     let image = document.createElementNS(kSvgNs, "image");
     image.setAttributeNS("http://www.w3.org/1999/xlink", "href", "NCC1701.png");
-    image.setAttribute("id", id);
+    image.setAttribute("id", ship_id);
     image.setAttribute("width",200);
     image.setAttribute("height",200);
     image.setAttribute("x",-100);
@@ -405,23 +499,21 @@ function addShip(gamestate, hex, facing)
     image.setAttribute("transform",`rotate(${60 * facing} 0 0)`);
     
     hex.parentElement.appendChild(image);
-    
 }
 
-// take a game state object from the server and apply it
-function evaluateGameState(serverGameState)
+function moveLocalShip(gamestate, shipPrius)
 {
-    let delta = generateDelta(g_LocalGameState.snapshot, serverGameState);
+    let newHex = document.getElementById(newHexId);
+    let shipInstance = getShipById(gamestate, ship_id);
+    let oldHexId = shipInstance.hexid;
+    let oldHex = document.getElementById(oldHexId);
     
-    for (let i=0,ni=delta.add.ships.length; i<ni; ++i)
-    {
-        let shipPrius = delta.add.ships[i];
-        let hex = document.getElementById(shipPrius.hex_id);
-        
-        addShip(g_LocalGameState, hex, shipPrius.facing);
-    }
-    
-    g_LocalGameState.snapshot = serverGameState;
+    let image = document.getElementById(ship_id);
+    oldHex.parentElement.removeChild(image);
+    newHex.parentElement.appendChild(image);
+
+    shipInstance.facing = shipPrius.facing;
+    shipInstance.hexid = shipPrius.hex_id;
 }
 
 function getDirectionFacing(sourceHexId, targetHexId)
@@ -512,18 +604,15 @@ function getShipIndexByHex(gamestate, hex)
     return getShipIndexByHexId(gamestate, hex.id);
 }
 
-function getShipIndexById(gamestate, shipId)
+function getShipById(gamestate, shipId)
 {
     for (let i=0,ni=gamestate.ships.length; i<ni; ++i)
     {
         if (gamestate.ships[i].id == shipId)
-            return i;
+            return gamestate.ships[i];
     }
-    return -1;
-}
-
-function unselectByShip(gamestate)
-{
+    
+    return null;
 }
 
 function distByHexId(hexid0, hexid1)
@@ -567,8 +656,10 @@ function onHexClick(gamestate, hex, event)
     {
     case "place":
         {
-            // select
-            addShip(gamestate, hex, 0);
+            // jiv fixme: /addship to update server state
+            let ship_id = g_AssetData.shipYard.id_gen++;
+            
+            addLocalShip(gamestate, ship_id, 0, hex);
             
             // update status line
             g_UIState.tools_mode = "move";
@@ -597,6 +688,7 @@ function onHexClick(gamestate, hex, event)
                     gamestate.updateShip = JSON.parse(JSON.stringify(gamestate.ships[index]));
                     gamestate.updateShip.hexid = hex.id;
                     
+                    g_UIState.altSelectedHex = hex;
                     hex.setAttribute("class", "hex-selected-secondary");
                 }
                 
@@ -604,9 +696,7 @@ function onHexClick(gamestate, hex, event)
             }
             else if (gamestate.updateShip)
             {
-                let index = getShipIndexById(gamestate, g_UIState.selectedShip);
                 let shipInstance = gamestate.updateShip;
-                
                 let shipFacing = shipInstance.facing;
                 let previousHexId = shipInstance.hexid;
                 const eligibility = isShipMoveEligible(gamestate, previousHexId, hex.id, shipFacing);
@@ -618,21 +708,30 @@ function onHexClick(gamestate, hex, event)
                     hex.setAttribute("class", "hex-selected");
                     
                     let patch = [];
+                    console.log(eligibility);
                     if (kMoveSlipStream & eligibility)
                     {
                         let shipSlipStream = deepCopy(shipInstance);
-                        shipSlipStream.hexid = hex.id;
+                        shipSlipStream.hex_id = hex.id;
                         patch.push(['SlipStream', serverMoveShip, shipSlipStream]);;
                     }
                     if (kMoveTurn & eligibility)
                     {
-                        let shipSlipStream = deepCopy(shipInstance);
-                        shipSlipStream.hexid = hex.id;
-                        patch.push(['Commit', serverMoveShip, shipSlipStream]);
+                        let shipTurn = deepCopy(shipInstance);
+                        shipTurn.hex_id = hex.id;
+                        shipTurn.facing = getDirectionFacing(previousHexId, hex.id);
+                        patch.push(['Turn', serverMoveShip, shipTurn]);
+                    }
+                    if (kMovePossible & eligibility)
+                    {
+                        let shipMove = deepCopy(shipInstance);
+                        shipMove.hex_id = hex.id;
+                        patch.push(['Move', serverMoveShip, shipMove]);
                     }
                     
-                    g_UIState.tools_mode = "move-finalize";
                     uiUpdateButtons(patch);
+                    
+                    g_UIState.tools_mode = "move-finalize";
                 }
                 
                 refreshUi();
@@ -739,14 +838,13 @@ function init()
         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200)
         {
             let gamestate = JSON.parse(xhr.response).game_state;
-            evaluateGameState(gamestate);
+            evaluateGameState(g_LocalGameState, gamestate);
             addCallbacks();
         }
     };
     xhr.send(JSON.stringify({
-        game_id: 1
-    }));    
-
+        game_id: g_LocalGameState.game_id
+    }));
 }
 
 init();
