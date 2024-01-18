@@ -154,7 +154,6 @@ function evaluateDeltaState(gamestate, deltaState)
         for (let i=0,ni=deltaState.change.ships.length; i<ni; ++i)
         {
             let shipPrius = deltaState.change.ships[i];
-            let newHexId = shipPrius.hex_id;
             
             moveLocalShip(g_LocalGameState, shipPrius);
         }
@@ -502,6 +501,9 @@ function addLocalShip(gamestate, ship_id, facing, hex)
 
 function moveLocalShip(gamestate, shipPrius)
 {
+    let newHexId = shipPrius.hex_id;
+    let ship_id = shipPrius.ship_id;
+    
     let newHex = document.getElementById(newHexId);
     let shipInstance = getShipById(gamestate, ship_id);
     let oldHexId = shipInstance.hexid;
@@ -707,7 +709,6 @@ function onHexClick(gamestate, hex, event)
                     hex.setAttribute("class", "hex-selected");
                     
                     let patch = [];
-                    console.log(eligibility);
                     if (kMoveSlipStream & eligibility)
                     {
                         let shipSlipStream = deepCopy(shipInstance);
