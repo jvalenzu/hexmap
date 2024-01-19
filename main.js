@@ -109,7 +109,6 @@ const g_Debug = false;
 // * default
 // * place
 // * move
-// * move-finalize
 
 var g_UIState =
 {
@@ -387,21 +386,11 @@ function updateStatusLine2(value0, value1)
     let divRight = document.createElement("div");
     divRight.setAttribute("style", "float: right;");
     
-    let button0 = document.createElement("button");
-    button0.setAttribute("id", "commit");
-    button0.appendChild(document.createTextNode("Commit"));
-    
-    let button1 = document.createElement("button");
-    button1.setAttribute("id", "undo");
-    button1.appendChild(document.createTextNode("Undo"));
-    
     let divStatus = document.createElement("div");
     divStatus.appendChild(document.createTextNode(value1));
     
     statusLine.appendChild(divLeft);
     statusLine.appendChild(divRight);
-    divRight.appendChild(button0);
-    divRight.appendChild(button1);
     statusLine.appendChild(divStatus);
 }
 
@@ -420,7 +409,7 @@ function updateStatusLines(value0, patches)
     let buttons = [];
     for (let i=0,ni=patches.length; i<ni; ++i)
     {
-        let patch = patches[i];
+        let patch = patches[i].concat();
         let label = patch.shift();
         let func = patch.shift();
         let button = document.createElement("button");
@@ -451,17 +440,18 @@ function updateGameStatus(state)
     {
     case "move":
         {
-            let status = " MOVE: select ship";
-            if (state.updateShip)
-                status = " MOVE: select next tile and orientation";
-            
-            updateStatusLine2(prefix, status);
-            
-            break;
-        }
-    case "move-finalize":
-        {
-            updateStatusLines(prefix, g_UIState.patch);
+            if (g_UIState.patch)
+            {
+                updateStatusLines(prefix, g_UIState.patch);
+            }
+            else
+            {
+                let status = " MOVE: select ship";
+                if (state.updateShip)
+                    status = " MOVE: select next tile and orientation";
+                
+                updateStatusLine2(prefix, status);
+            }
             
             break;
         }
@@ -557,7 +547,7 @@ function getDirectionFacing(sourceHexId, targetHexId)
 }
 
 const kMoveIneligible = 0x0;
-const kMovePossible   = 0x1;
+const kMoveStraight   = 0x1;
 const kMoveTurn       = 0x2;
 const kMoveSlipStream = 0x4;
 function isShipMoveEligible(gamestate, sourceHexId, targetHexId, ship_facing)
@@ -571,14 +561,14 @@ function isShipMoveEligible(gamestate, sourceHexId, targetHexId, ship_facing)
     {
     case 0:
         {
-            return kMovePossible;
+            return kMoveStraight;
         }
     case -5:
     case 5:
     case -1:
     case 1:
         {
-            return kMoveSlipStream|kMoveTurn|kMovePossible;
+            return kMoveSlipStream|kMoveTurn;
         }
     default:
         {
@@ -679,21 +669,12 @@ function onHexClick(gamestate, hex, event)
                     g_UIState.selectedHex = null;
                 }
                 
-                if (gamestate.updateShip)
-                {
-                    gamestate.updateShip.facing = gamestate.updateShip.facing + 1;
-                    gamestate.updateShip.facing %= 6;
-                }
-                else
-                {
-                    gamestate.updateShip = JSON.parse(JSON.stringify(gamestate.ships[index]));
-                    gamestate.updateShip.hexid = hex.id;
-                    
-                    g_UIState.altSelectedHex = hex;
-                    hex.setAttribute("class", "hex-selected-secondary");
-                }
+                gamestate.updateShip = deepCopy(gamestate.ships[index]);
+                gamestate.updateShip.hexid = hex.id;
+                g_UIState.altSelectedHex = hex;
+                hex.setAttribute("class", "hex-selected-secondary");
                 
-                refreshUi();
+                uiUpdateButtons(null);
             }
             else if (gamestate.updateShip)
             {
@@ -722,7 +703,7 @@ function onHexClick(gamestate, hex, event)
                         shipTurn.facing = getDirectionFacing(previousHexId, hex.id);
                         patch.push(['Turn', serverMoveShip, shipTurn]);
                     }
-                    if (kMovePossible & eligibility)
+                    if (kMoveStraight & eligibility)
                     {
                         let shipMove = deepCopy(shipInstance);
                         shipMove.hex_id = hex.id;
@@ -730,12 +711,10 @@ function onHexClick(gamestate, hex, event)
                     }
                     
                     uiUpdateButtons(patch);
-                    
-                    g_UIState.tools_mode = "move-finalize";
                 }
-                
-                refreshUi();
             }
+
+            refreshUi();
             
             break;
         }
