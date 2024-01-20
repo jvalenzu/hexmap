@@ -1,4 +1,5 @@
 let express = require("express");
+let cors = require("cors");
 
 const kFacingN  = 0;
 const kFacingNE = 1;
@@ -6,11 +7,6 @@ const kFacingSE = 2;
 const kFacingS  = 3;
 const kFacingSW = 4;
 const kFacingNW = 5;
-
-let app = express();
-app.listen(3000, () => {
-    console.log("Server running on port 3000");
-});
 
 class Game
 {
@@ -126,8 +122,21 @@ function newShip(game_id, ship_id, player_id, hex_id, facing)
     s_ships.push(ship);
 }
 
+
+  
+let corsSites = { 
+   origin : ['http://localhost:5173']
+};
+
+
+let app = express();
+app.listen(3000, () => {
+    console.log("Server running on port 3000");
+});
+
 app.use("/", express.static('..'));
 app.use(express.json());
+app.use(cors());
 
 // new game
 app.post("/newgame", (req, res, arg) => {

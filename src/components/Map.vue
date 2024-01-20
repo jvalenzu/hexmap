@@ -1,0 +1,328 @@
+<template>
+    <div id="map-container">
+        <svg id="svg" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg" style="width:1535;height:658;">
+            <g id="map" transform="translate(0, 0) scale(0.5)">
+                <g transform="translate(0,0)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-8"></polygon></g>
+                <g transform="translate(306,0)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-65542"></polygon></g>
+                <g transform="translate(612,0)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-131076"></polygon></g>
+                <g transform="translate(918,0)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-196610"></polygon></g>
+                <g transform="translate(1224,0)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-327680"></polygon></g>
+                <g transform="translate(1530,0)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-393214"></polygon></g>
+                <g transform="translate(1836,0)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-458748"></polygon></g>
+                <g transform="translate(2142,0)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-524282"></polygon></g>
+                <g transform="translate(153,88)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-7"></polygon></g>
+                <g transform="translate(459,88)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-65541"></polygon></g>
+                <g transform="translate(765,88)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-131075"></polygon></g>
+                <g transform="translate(1071,88)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-196609"></polygon></g>
+                <g transform="translate(1377,88)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-327679"></polygon></g>
+                <g transform="translate(1683,88)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-393213"></polygon></g>
+                <g transform="translate(1989,88)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-458747"></polygon></g>
+                <g transform="translate(2295,88)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-524281"></polygon></g>
+                <g transform="translate(0,176)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="65528"></polygon></g>
+                <g transform="translate(306,176)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-6"></polygon></g>
+                <g transform="translate(612,176)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-65540"></polygon></g>
+                <g transform="translate(918,176)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-131074"></polygon></g>
+                <g transform="translate(1224,176)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-262144"></polygon></g>
+                <g transform="translate(1530,176)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-327678"></polygon></g>
+                <g transform="translate(1836,176)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-393212"></polygon></g>
+                <g transform="translate(2142,176)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-458746"></polygon></g>
+                <g transform="translate(153,264)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="65529"></polygon></g>
+                <g transform="translate(459,264)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-5"></polygon></g>
+                <g transform="translate(765,264)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-65539"></polygon></g>
+                <g transform="translate(1071,264)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-131073"></polygon></g>
+                <g transform="translate(1377,264)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-262143"></polygon></g>
+                <g transform="translate(1683,264)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-327677"></polygon></g>
+                <g transform="translate(1989,264)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-393211"></polygon></g>
+                <g transform="translate(2295,264)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-458745"></polygon></g>
+                <g transform="translate(0,352)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="131064"></polygon></g>
+                <g transform="translate(306,352)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="65530"></polygon></g>
+                <g transform="translate(612,352)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-4"></polygon></g>
+                <g transform="translate(918,352)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-65538"></polygon></g>
+                <g transform="translate(1224,352)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-196608"></polygon></g>
+                <g transform="translate(1530,352)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-262142"></polygon></g>
+                <g transform="translate(1836,352)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-327676"></polygon></g>
+                <g transform="translate(2142,352)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-393210"></polygon></g>
+                <g transform="translate(153,440)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="131065"></polygon></g>
+                <g transform="translate(459,440)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="65531"></polygon></g>
+                <g transform="translate(765,440)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-3"></polygon></g>
+                <g transform="translate(1071,440)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-65537"></polygon></g>
+                <g transform="translate(1377,440)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-196607"></polygon></g>
+                <g transform="translate(1683,440)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-262141"></polygon></g>
+                <g transform="translate(1989,440)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-327675"></polygon></g>
+                <g transform="translate(2295,440)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-393209"></polygon></g>
+                <g transform="translate(0,528)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="196600"></polygon></g>
+                <g transform="translate(306,528)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="131066"></polygon></g>
+                <g transform="translate(612,528)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="65532"></polygon></g>
+                <g transform="translate(918,528)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-2"></polygon></g>
+                <g transform="translate(1224,528)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-131072"></polygon></g>
+                <g transform="translate(1530,528)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-196606"></polygon></g>
+                <g transform="translate(1836,528)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-262140"></polygon></g>
+                <g transform="translate(2142,528)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-327674"></polygon></g>
+                <g transform="translate(153,616)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="196601"></polygon></g>
+                <g transform="translate(459,616)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="131067"></polygon></g>
+                <g transform="translate(765,616)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="65533"></polygon></g>
+                <g transform="translate(1071,616)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-1"></polygon></g>
+                <g transform="translate(1377,616)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-131071"></polygon></g>
+                <g transform="translate(1683,616)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-196605"></polygon></g>
+                <g transform="translate(1989,616)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-262139"></polygon></g>
+                <g transform="translate(2295,616)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-327673"></polygon></g>
+                <g transform="translate(0,704)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="262136"></polygon></g>
+                <g transform="translate(306,704)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="196602"></polygon></g>
+                <g transform="translate(612,704)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="131068"></polygon></g>
+                <g transform="translate(918,704)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="65534"></polygon></g>
+                <g transform="translate(1224,704)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-65536"></polygon></g>
+                <g transform="translate(1530,704)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-131070"></polygon></g>
+                <g transform="translate(1836,704)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-196604"></polygon></g>
+                <g transform="translate(2142,704)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-262138"></polygon></g>
+                <g transform="translate(153,792)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="262137"></polygon></g>
+                <g transform="translate(459,792)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="196603"></polygon></g>
+                <g transform="translate(765,792)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="131069"></polygon></g>
+                <g transform="translate(1071,792)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="65535"></polygon></g>
+                <g transform="translate(1377,792)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-65535"></polygon></g>
+                <g transform="translate(1683,792)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-131069"></polygon></g>
+                <g transform="translate(1989,792)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-196603"></polygon></g>
+                <g transform="translate(2295,792)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-262137"></polygon></g>
+                <g transform="translate(0,880)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="327672"></polygon></g>
+                <g transform="translate(306,880)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="262138"></polygon></g>
+                <g transform="translate(612,880)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="196604"></polygon></g>
+                <g transform="translate(918,880)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="131070"></polygon></g>
+                <g transform="translate(1224,880)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="0"></polygon></g>
+                <g transform="translate(1530,880)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-65534"></polygon></g>
+                <g transform="translate(1836,880)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-131068"></polygon></g>
+                <g transform="translate(2142,880)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-196602"></polygon></g>
+                <g transform="translate(153,968)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="327673"></polygon></g>
+                <g transform="translate(459,968)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="262139"></polygon></g>
+                <g transform="translate(765,968)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="196605"></polygon></g>
+                <g transform="translate(1071,968)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="131071"></polygon></g>
+                <g transform="translate(1377,968)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="1"></polygon></g>
+                <g transform="translate(1683,968)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-65533"></polygon></g>
+                <g transform="translate(1989,968)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-131067"></polygon></g>
+                <g transform="translate(2295,968)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-196601"></polygon></g>
+                <g transform="translate(0,1056)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="393208"></polygon></g>
+                <g transform="translate(306,1056)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="327674"></polygon></g>
+                <g transform="translate(612,1056)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="262140"></polygon></g>
+                <g transform="translate(918,1056)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="196606"></polygon></g>
+                <g transform="translate(1224,1056)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="65536"></polygon></g>
+                <g transform="translate(1530,1056)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="2"></polygon></g>
+                <g transform="translate(1836,1056)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-65532"></polygon></g>
+                <g transform="translate(2142,1056)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-131066"></polygon></g>
+                <g transform="translate(153,1144)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="393209"></polygon></g>
+                <g transform="translate(459,1144)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="327675"></polygon></g>
+                <g transform="translate(765,1144)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="262141"></polygon></g>
+                <g transform="translate(1071,1144)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="196607"></polygon></g>
+                <g transform="translate(1377,1144)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="65537"></polygon></g>
+                <g transform="translate(1683,1144)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="3"></polygon></g>
+                <g transform="translate(1989,1144)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-65531"></polygon></g>
+                <g transform="translate(2295,1144)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-131065"></polygon></g>
+                <g transform="translate(0,1232)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="458744"></polygon></g>
+                <g transform="translate(306,1232)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="393210"></polygon></g>
+                <g transform="translate(612,1232)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="327676"></polygon></g>
+                <g transform="translate(918,1232)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="262142"></polygon></g>
+                <g transform="translate(1224,1232)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="131072"></polygon></g>
+                <g transform="translate(1530,1232)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="65538"></polygon></g>
+                <g transform="translate(1836,1232)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="4"></polygon></g>
+                <g transform="translate(2142,1232)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-65530"></polygon></g>
+                <g transform="translate(153,1320)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="458745"></polygon></g>
+                <g transform="translate(459,1320)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="393211"></polygon></g>
+                <g transform="translate(765,1320)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="327677"></polygon></g>
+                <g transform="translate(1071,1320)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="262143"></polygon></g>
+                <g transform="translate(1377,1320)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="131073"></polygon></g>
+                <g transform="translate(1683,1320)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="65539"></polygon></g>
+                <g transform="translate(1989,1320)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="5"></polygon></g>
+                <g transform="translate(2295,1320)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="-65529"></polygon></g>
+                <g transform="translate(0,1408)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="524280"></polygon></g>
+                <g transform="translate(306,1408)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="458746"></polygon></g>
+                <g transform="translate(612,1408)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="393212"></polygon></g>
+                <g transform="translate(918,1408)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="327678"></polygon></g>
+                <g transform="translate(1224,1408)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="196608"></polygon></g>
+                <g transform="translate(1530,1408)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="131074"></polygon></g>
+                <g transform="translate(1836,1408)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="65540"></polygon></g>
+                <g transform="translate(2142,1408)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="6"></polygon></g>
+                <g transform="translate(153,1496)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="524281"></polygon></g>
+                <g transform="translate(459,1496)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="458747"></polygon></g>
+                <g transform="translate(765,1496)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="393213"></polygon></g>
+                <g transform="translate(1071,1496)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="327679"></polygon></g>
+                <g transform="translate(1377,1496)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="196609"></polygon></g>
+                <g transform="translate(1683,1496)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="131075"></polygon></g>
+                <g transform="translate(1989,1496)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="65541"></polygon></g>
+                <g transform="translate(2295,1496)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="7"></polygon></g>
+                <g transform="translate(0,1584)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="589816"></polygon></g>
+                <g transform="translate(306,1584)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="524282"></polygon></g>
+                <g transform="translate(612,1584)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="458748"></polygon></g>
+                <g transform="translate(918,1584)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="393214"></polygon></g>
+                <g transform="translate(1224,1584)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="262144"></polygon></g>
+                <g transform="translate(1530,1584)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="196610"></polygon></g>
+                <g transform="translate(1836,1584)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="131076"></polygon></g>
+                <g transform="translate(2142,1584)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="65542"></polygon></g>
+                <g transform="translate(153,1672)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="589817"></polygon></g>
+                <g transform="translate(459,1672)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="524283"></polygon></g>
+                <g transform="translate(765,1672)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="458749"></polygon></g>
+                <g transform="translate(1071,1672)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="393215"></polygon></g>
+                <g transform="translate(1377,1672)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="262145"></polygon></g>
+                <g transform="translate(1683,1672)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="196611"></polygon></g>
+                <g transform="translate(1989,1672)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="131077"></polygon></g>
+                <g transform="translate(2295,1672)" >
+                    <polygon points=" 100,   0  +50, -87  -50, -87 -100,  -0  -50,  87  +50,  87" class="hex-unselected" id="65543"></polygon></g>
+            </g>
+        </svg>
+    </div>
+</template>

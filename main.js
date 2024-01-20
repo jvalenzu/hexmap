@@ -7,23 +7,19 @@ const kSvgNs = "http://www.w3.org/2000/svg";
 // * zoom controls
 //
 // * different context specific "modes"
-//   - move mode
-//     o start with selected ship
-//     o select next hex and turn marker if eligible
-//   - slip/turn button on status line
 //   - commit action
-//   
-// * orient ships
-// * move ship data into state
-// * client/server logic
-//   * seperate out into client gathers input, server applies operations on data, saves to undo stack
-
+//
+// * add mode selection
+// * update shipcard display with ship info
+//
 // ship instances
 // * reference to ship class
 // * subimpulses since last turn
 // * subimpulses since last slip
 // * base speed this turn
 // * acceleration this impulse
+//
+// undo/redo
 
 /*
 
@@ -131,6 +127,7 @@ function evaluateDeltaState(gamestate, deltaState)
         {
             let shipPrius = deltaState.add.ships[i];
             let hex = document.getElementById(shipPrius.hex_id);
+
             addLocalShip(g_LocalGameState, shipPrius.ship_id, shipPrius.facing, hex);
         }
     }
@@ -367,12 +364,6 @@ function uiUpdateButtons(patch)
     g_UIState.patch = patch;
 }
 
-function updateStatusLine(value)
-{
-    let status_line = document.getElementById("status-line");
-    status_line.textContent = value;
-}
-
 function updateStatusLine2(value0, value1)
 {
     //  jiv TODO: seems like a perfect place for a template
@@ -438,6 +429,12 @@ function updateGameStatus(state)
     
     switch (g_UIState.tools_mode)
     {
+        default:
+        {
+            
+            updateStatusLine2(prefix, `Mode: ${g_UIState.tools_mode}`);
+            break;
+        }
     case "move":
         {
             if (g_UIState.patch)
@@ -460,11 +457,6 @@ function updateGameStatus(state)
             let status = ` PLACE SHIP: select tile and orientation`;
             updateStatusLine2(prefix, status);
             
-            break;
-        }
-    default:
-        {
-            updateStatusLine(prefix);
             break;
         }
     }

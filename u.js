@@ -1,3 +1,5 @@
+// scratch file, not included directly
+
 // function to regenerate map
 function resizeCanvas(num_cols, num_rows)
 {
