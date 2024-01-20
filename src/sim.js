@@ -150,7 +150,6 @@ function evaluateDeltaState(gamestate, deltaState)
         for (let i=0,ni=deltaState.change.ships.length; i<ni; ++i)
         {
             let shipPrius = deltaState.change.ships[i];
-            
             moveLocalShip(g_LocalGameState, shipPrius);
         }
     }
@@ -471,7 +470,7 @@ function addLocalShip(gamestate, ship_id, facing, hex)
     // add ui
     let image = document.createElementNS(kSvgNs, "image");
     image.setAttributeNS("http://www.w3.org/1999/xlink", "href", "NCC1701.png");
-    image.setAttribute("id", ship_id);
+    image.setAttribute("id", `ship-image-${ship_id}`);
     image.setAttribute("width",200);
     image.setAttribute("height",200);
     image.setAttribute("x",-100);
@@ -491,10 +490,12 @@ function moveLocalShip(gamestate, shipPrius)
     let oldHexId = shipInstance.hexid;
     let oldHex = document.getElementById(oldHexId);
     
-    let image = document.getElementById(ship_id);
+    let image = document.getElementById(`ship-image-${ship_id}`);
+    image.setAttribute("transform",`rotate(${60 * shipPrius.facing} 0 0)`);
+    
     oldHex.parentElement.removeChild(image);
     newHex.parentElement.appendChild(image);
-
+    
     shipInstance.facing = shipPrius.facing;
     shipInstance.hexid = shipPrius.hex_id;
 }
