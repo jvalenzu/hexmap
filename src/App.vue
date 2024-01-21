@@ -13,8 +13,8 @@ import SimGlobals from './sim.js';
                     :context_message="SimGlobals.g_ContextMessage"
                     :debug_options="SimGlobals.g_DebugOptions"
                     :action_buttons="SimGlobals.g_ActionButtons"/>
-        <div id="main-container">
-            <ShipInfo msg="You did it!" />
+        <div id="main-container" width="100%">
+            <ShipInfo msg="Federation Heavy Cruiser"/>
             <Map />
         </div>
     </div>
