@@ -1,8 +1,8 @@
-const kSvgNs = "http://www.w3.org/2000/svg";
-
 // jiv todo
+//
 // * need image dimension information associated ship pieces like NCC1701.png in order to
 //   avoid hard coded tweaks in code
+//
 // * have a ship playable card in addition to starmap
 // * zoom controls
 //
@@ -36,6 +36,21 @@ const kSvgNs = "http://www.w3.org/2000/svg";
        \____|____/
 
  */
+
+import { ref } from 'vue';
+const g_TurnStatus = ref("Hello, Turn");
+const g_ContextMessage = ref("Context Message");
+const g_DebugOptions = ref([]);
+const g_ActionButtons = ref([]);
+
+export default
+{
+    g_TurnStatus,
+    g_ContextMessage,
+    g_DebugOptions,
+    g_ActionButtons
+};
+const kSvgNs = "http://www.w3.org/2000/svg";
 
 const kDebugColors = [
     '#00ff00',
@@ -127,7 +142,7 @@ function evaluateDeltaState(gamestate, deltaState)
         {
             let shipPrius = deltaState.add.ships[i];
             let hex = document.getElementById(shipPrius.hex_id);
-
+            
             addLocalShip(g_LocalGameState, shipPrius.ship_id, shipPrius.facing, hex);
         }
     }
@@ -363,60 +378,34 @@ function uiUpdateButtons(patch)
     g_UIState.patch = patch;
 }
 
-function updateStatusLine2(value0, value1)
+function debugGenerateDropDown()
 {
-    //  jiv TODO: seems like a perfect place for a template
-    let statusLine = document.getElementById("status-line");
-    statusLine.innerHTML = "";
+    let options = [
+        { "text": "None", "value": "None" },
+        { "text": "Move Mode", "value": "setMoveMode" }
+    ];
     
-    let divLeft = document.createElement("div");
-    divLeft.setAttribute("style", "float: left; padding-right: 89px;");
-    divLeft.appendChild(document.createTextNode(value0));
-    
-    let divRight = document.createElement("div");
-    divRight.setAttribute("style", "float: right;");
-    
-    let divStatus = document.createElement("div");
-    divStatus.appendChild(document.createTextNode(value1));
-    
-    statusLine.appendChild(divLeft);
-    statusLine.appendChild(divRight);
-    statusLine.appendChild(divStatus);
+    g_DebugOptions.value = options;
 }
 
-function updateStatusLines(value0, patches)
+function updateStatusLines(value0, value1, patches=null)
 {
-    let statusLine = document.getElementById("status-line");
-    statusLine.innerHTML = "";
-    
-    let divLeft = document.createElement("div");
-    divLeft.setAttribute("style", "float: left; padding-right: 89px;");
-    divLeft.appendChild(document.createTextNode(value0));
-    
-    let divRight = document.createElement("div");
-    divRight.setAttribute("style", "float: right;");
-    
-    let buttons = [];
-    for (let i=0,ni=patches.length; i<ni; ++i)
+    g_TurnStatus.value = value0;
+    g_ContextMessage.value = value1;
+
+    if (patches)
     {
-        let patch = patches[i].concat();
-        let label = patch.shift();
-        let func = patch.shift();
-        let button = document.createElement("button");
-        
-        button.setAttribute("id", label);
-        button.appendChild(document.createTextNode(label));
-        button.addEventListener("click", () => { func(...patch); });
-        
-        buttons.push(button);
+        let buttons = [];
+        for (let i=0,ni=patches.length; i<ni; ++i)
+        {
+            let patch = patches[i].concat();
+            let label = patch.shift();
+            let func = patch.shift();
+            buttons.push({label: label, id: label, onclick: () => { func(...patch) }});
+        }
+
+        g_ActionButtons.value = buttons;
     }
-    
-    statusLine.setAttribute("style", "height: 40px;");    
-    statusLine.appendChild(divLeft);
-    statusLine.appendChild(divRight);
-    
-    for (let i=0,ni=buttons.length; i<ni; ++i)
-        divRight.appendChild(buttons[i]);
 }
 
 function updateGameStatus(state)
@@ -431,14 +420,14 @@ function updateGameStatus(state)
         default:
         {
             
-            updateStatusLine2(prefix, `Mode: ${g_UIState.tools_mode}`);
+            updateStatusLines(prefix, `Mode: ${g_UIState.tools_mode}`);
             break;
         }
     case "move":
         {
             if (g_UIState.patch)
             {
-                updateStatusLines(prefix, g_UIState.patch);
+                updateStatusLines(prefix, "Confirm Action", g_UIState.patch);
             }
             else
             {
@@ -446,7 +435,7 @@ function updateGameStatus(state)
                 if (state.updateShip)
                     status = " MOVE: select next tile and orientation";
                 
-                updateStatusLine2(prefix, status);
+                updateStatusLines(prefix, status);
             }
             
             break;
@@ -454,7 +443,7 @@ function updateGameStatus(state)
     case "place":
         {
             let status = ` PLACE SHIP: select tile and orientation`;
-            updateStatusLine2(prefix, status);
+            updateStatusLines(prefix, status);
             
             break;
         }
@@ -817,6 +806,8 @@ function init()
     xhr.send(JSON.stringify({
         game_id: g_LocalGameState.game_id
     }));
+
+    debugGenerateDropDown();
 }
 
 init();
@@ -841,3 +832,4 @@ init();
 //     console.log(delta2);
 // }
 // test();
+
