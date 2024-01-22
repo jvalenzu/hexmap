@@ -180,7 +180,7 @@ function evaluateGameState(localGameState, serverGameState)
 
 function serverCall(url, data, callback)
 {
-    const kUrl = "http://127.0.0.1:3000"+url;
+    const kUrl = import.meta.env.VITE_API_URL+url;
     let xhr = new XMLHttpRequest();
     xhr.open("POST", kUrl, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
@@ -458,7 +458,7 @@ function addLocalShip(gamestate, ship_id, facing, hex)
     
     // add ui
     let image = document.createElementNS(kSvgNs, "image");
-    image.setAttributeNS("http://www.w3.org/1999/xlink", "href", "NCC1701.png");
+    image.setAttributeNS("http://www.w3.org/1999/xlink", "href", "assets/counters/NCC1701.png");
     image.setAttribute("id", `ship-image-${ship_id}`);
     image.setAttribute("width",200);
     image.setAttribute("height",200);
@@ -791,7 +791,7 @@ function draw()
 
 function init()
 {
-    const kUrl = "http://127.0.0.1:3000/getstate";
+    const kUrl = import.meta.env.VITE_API_URL+"/getstate";
     let xhr = new XMLHttpRequest();
     xhr.open("POST", kUrl, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
