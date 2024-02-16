@@ -42,6 +42,7 @@ const g_TurnStatus = ref("Hello, Turn");
 const g_ContextMessage = ref("Context Message");
 const g_DebugOptions = ref([]);
 const g_ActionButtons = ref([]);
+const s_BuildVersion = 1;
 
 export default
 {
@@ -211,6 +212,7 @@ function serverMoveShip(data)
                    
                    // clean up ui state
                    uiClearSelectedHex(g_UIState);
+                   uiUpdateButtons(null);
                    
                    refreshUi();
                });
@@ -393,19 +395,19 @@ function updateStatusLines(value0, value1, patches=null)
     g_TurnStatus.value = value0;
     g_ContextMessage.value = value1;
 
+    let buttons = [];
     if (patches)
     {
-        let buttons = [];
         for (let i=0,ni=patches.length; i<ni; ++i)
         {
             let patch = patches[i].concat();
             let label = patch.shift();
             let func = patch.shift();
-            buttons.push({label: label, id: label, onclick: () => { func(...patch) }});
+            buttons.push({label: label, id: label, onclick: () => { func(...patch); }});
         }
-
-        g_ActionButtons.value = buttons;
     }
+    
+    g_ActionButtons.value = buttons;
 }
 
 function updateGameStatus(state)
@@ -808,6 +810,8 @@ function init()
     }));
 
     debugGenerateDropDown();
+
+    console.log("version: " + s_BuildVersion);
 }
 
 init();
