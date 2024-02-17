@@ -42,15 +42,7 @@ const g_TurnStatus = ref("Hello, Turn");
 const g_ContextMessage = ref("Context Message");
 const g_DebugOptions = ref([]);
 const g_ActionButtons = ref([]);
-const s_BuildVersion = 1;
-
-export default
-{
-    g_TurnStatus,
-    g_ContextMessage,
-    g_DebugOptions,
-    g_ActionButtons
-};
+const kBuildVersion = 6;
 const kSvgNs = "http://www.w3.org/2000/svg";
 
 const kDebugColors = [
@@ -75,6 +67,14 @@ const kDebugColors = [
     '#ff0033',
     '#00ccff'
 ];
+
+const kDebugOptions = [
+    { "text": "None", "value": "None" },
+    { "text": "Move Mode", "value": "setMoveMode" }
+];
+
+let g_DebugBinding = {};
+
 
 class Ship
 {
@@ -132,8 +132,6 @@ var g_UIState =
     tools_mode: "move",
     patch: null
 };
-
-var g_Scale = 1;
 
 function evaluateDeltaState(gamestate, deltaState)
 {
@@ -380,14 +378,34 @@ function uiUpdateButtons(patch)
     g_UIState.patch = patch;
 }
 
-function debugGenerateDropDown()
+function changeDebugOptions(event)
 {
-    let options = [
-        { "text": "None", "value": "None" },
-        { "text": "Move Mode", "value": "setMoveMode" }
-    ];
+    switch (event.target.selectedIndex)
+    {
+        default:
+        {            
+            const func_name = kDebugOptions[event.target.selectedIndex].value;
+            const func = g_DebugBinding[func_name];
+            
+            func();
+            
+            break;
+        }
+    }
+}
+
+function debugSetMoveMode()
+{
+    g_UIState.tools_mode = "move";
     
-    g_DebugOptions.value = options;
+    uiUpdateButtons(null);
+    refreshUi();    
+}
+
+function debugInit()
+{
+    g_DebugOptions.value = kDebugOptions;
+    g_DebugBinding["setMoveMode"] = debugSetMoveMode;
 }
 
 function updateStatusLines(value0, value1, patches=null)
@@ -809,9 +827,9 @@ function init()
         game_id: g_LocalGameState.game_id
     }));
 
-    debugGenerateDropDown();
-
-    console.log("version: " + s_BuildVersion);
+    debugInit();
+    
+    console.log("version: " + kBuildVersion);
 }
 
 init();
@@ -837,3 +855,11 @@ init();
 // }
 // test();
 
+export default
+{
+    g_TurnStatus,
+    g_ContextMessage,
+    g_DebugOptions,
+    g_ActionButtons,
+    changeDebugOptions
+};

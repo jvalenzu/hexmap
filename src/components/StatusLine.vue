@@ -1,11 +1,11 @@
 <script setup>
-const props = defineProps(['turn_status', 'context_message', 'debug_options', 'action_buttons']);
+const props = defineProps(['turn_status', 'context_message', 'debug_options', 'action_buttons', 'change_debug_options']);
 </script>
 
 <template>
 <div id="status-line" style="height: 40px;">
     <div id="debug-button-bar" style="float: left;">
-        <select>
+        <select @change="change_debug_options">
             <option v-for="item in debug_options.value" :value="item.value">
                 {{item.text}}
             </option>
