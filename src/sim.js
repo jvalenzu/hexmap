@@ -100,6 +100,18 @@ class UnassignedDamageElement
     }
 };
 
+class UiPatchElement
+{
+    constructor(label, onpress, ...args)
+    {
+        this.label = label;
+        this.onpress = onpress;
+        this.args = args;
+
+        this.enabled = () => { return true; };
+    }
+};
+
 let g_AssetData =
 {
     shipYard: {
@@ -204,7 +216,7 @@ function serverCall(url, data, callback)
             callback(response);
         }
     };
-    
+
     let params = deepCopy(data);
     params.game_id = g_LocalGameState.game_id;
     xhr.send(JSON.stringify(params));
@@ -446,6 +458,7 @@ function debugSetUnassignedDamageShield()
     g_LocalGameState.unassignedDamage = [ e ];
 
     g_UIState.tools_mode = "assign-damage";
+    
     uiUpdateButtons(null);
     refreshUi();
     
@@ -501,10 +514,10 @@ function updateStatusLines(value0, value1, patches=null)
     {
         for (let i=0,ni=patches.length; i<ni; ++i)
         {
-            let patch = patches[i].concat();
-            let label = patch.shift();
-            let func = patch.shift();
-            buttons.push({label: label, id: label, onclick: () => { func(...patch); }});
+            let patch = patches[i];
+            let label = patch.label;
+            let func = patch.onpress;
+            buttons.push({label: label, id: label, onclick: () => { func(...patch.args); }});
         }
     }
     
@@ -790,20 +803,26 @@ function onHexClick(gamestate, hex, event)
                     {
                         let shipSlipStream = deepCopy(shipInstance);
                         shipSlipStream.hex_id = hex.id;
-                        patch.push(['SlipStream', serverMoveShip, shipSlipStream]);;
+                        
+                        let pe = new UiPatchElement('SlipStream', serverMoveShip, shipSlipStream);
+                        patch.push(pe);
                     }
                     if (kMoveTurn & eligibility)
                     {
                         let shipTurn = deepCopy(shipInstance);
                         shipTurn.hex_id = hex.id;
                         shipTurn.facing = getDirectionFacing(previousHexId, hex.id);
-                        patch.push(['Turn', serverMoveShip, shipTurn]);
+                        
+                        let pe = new UiPatchElement('Turn', serverMoveShip, shipTurn);
+                        patch.push(pe);
                     }
                     if (kMoveStraight & eligibility)
                     {
                         let shipMove = deepCopy(shipInstance);
                         shipMove.hex_id = hex.id;
-                        patch.push(['Move', serverMoveShip, shipMove]);
+                        
+                        let pe = new UiPatchElement('Move', serverMoveShip, shipMove);
+                        patch.push(pe);
                     }
                     
                     uiUpdateButtons(patch);
