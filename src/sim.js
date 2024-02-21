@@ -69,8 +69,11 @@ const kDebugColors = [
 ];
 
 const kDebugOptions = [
-    { "text": "None", "value": "None" },
-    { "text": "Move Mode", "value": "setMoveMode" }
+    { "text": "None", "value": null },
+    { "text": "Reset", "value": "debugReset" },
+    { "text": "Move Mode", "value": "debugSetMoveMode" },
+    { "text": "UI 1 Damage on Shield", "value": "debugUiDamageOnShield" },
+    { "text": "Set unassigned damage shield", "value": "debugSetUnassignedDamageShield" }
 ];
 
 let g_DebugBinding = {};
@@ -85,6 +88,15 @@ class Ship
         this.klass = klass;
         this.hexid = hexid;
         this.facing = facing;
+    }
+};
+
+class UnassignedDamageElement
+{
+    constructor(system_name, damage_points)
+    {
+        this.system_name = system_name;
+        this.damage_points = damage_points;
     }
 };
 
@@ -112,7 +124,8 @@ let g_LocalGameState =
             facing: 0
         }
     ],
-    updateShip: null
+    updateShip: null,
+    unassignedDamage: null
 };
 
 const g_Debug = false;
@@ -121,6 +134,7 @@ const g_Debug = false;
 // * default
 // * place
 // * move
+// * assign-damage
 
 var g_UIState =
 {
@@ -383,15 +397,79 @@ function changeDebugOptions(event)
     switch (event.target.selectedIndex)
     {
         default:
-        {            
+        {
             const func_name = kDebugOptions[event.target.selectedIndex].value;
             const func = g_DebugBinding[func_name];
-            
-            func();
+            if (func)
+            {
+                let ret = func();
+                if (ret)
+                    event.target.selectedIndex = 0;
+            }
             
             break;
         }
     }
+}
+
+function debugUiDamageOnShield()
+{
+    let ship_info_container = document.getElementById("ship-info-container");
+    let embed = ship_info_container.querySelector("embed");
+    let svg = embed.getSVGDocument();
+    if (svg)
+    {
+        let svg0 = svg.querySelector('#svg1974');
+        let shieldBox0 = svg0.querySelector('#shield1_0');
+        shieldBox0.setAttribute('class', 'shield-damaged');
+    }
+    
+    return true;
+}
+
+function resetUiDamageOnShield()
+{
+    let ship_info_container = document.getElementById("ship-info-container");
+    let embed = ship_info_container.querySelector("embed");
+    let svg = embed.getSVGDocument();
+    if (svg)
+    {
+        let svg0 = svg.querySelector('#svg1974');
+        let shieldBox0 = svg0.querySelector('#shield1_0');
+        shieldBox0.setAttribute('class', 'shield-undamaged');
+    }
+}
+
+function debugSetUnassignedDamageShield()
+{
+    let e = new UnassignedDamageElement("shield1", 4);
+    g_LocalGameState.unassignedDamage = [ e ];
+
+    g_UIState.tools_mode = "assign-damage";
+    uiUpdateButtons(null);
+    refreshUi();
+    
+    return false;
+}
+
+function resetSetUnassignedDamage()
+{
+    console_log("resetSetUnassignedDamage");
+}
+
+function debugReset()
+{
+    for (let key in g_DebugBinding)
+    {
+        if (key.endsWith("_reset"))
+        {
+            let func = g_DebugBinding[key];
+            if (func)
+                func();
+        }
+    }
+    
+    return true;
 }
 
 function debugSetMoveMode()
@@ -399,20 +477,25 @@ function debugSetMoveMode()
     g_UIState.tools_mode = "move";
     
     uiUpdateButtons(null);
-    refreshUi();    
+    refreshUi();
 }
 
 function debugInit()
 {
     g_DebugOptions.value = kDebugOptions;
-    g_DebugBinding["setMoveMode"] = debugSetMoveMode;
+    g_DebugBinding["debugReset"] = debugReset;
+    g_DebugBinding["debugSetMoveMode"] = debugSetMoveMode;
+    g_DebugBinding["debugUiDamageOnShield"] = debugUiDamageOnShield;
+    g_DebugBinding["debugUiDamageOnShield_reset"] = resetUiDamageOnShield;
+    g_DebugBinding["debugSetUnassignedDamageShield"] = debugSetUnassignedDamageShield;
+    g_DebugBinding["debugSetUnassignedDamageShield_reset"] = resetSetUnassignedDamage;
 }
 
 function updateStatusLines(value0, value1, patches=null)
 {
     g_TurnStatus.value = value0;
     g_ContextMessage.value = value1;
-
+    
     let buttons = [];
     if (patches)
     {
@@ -441,6 +524,17 @@ function updateGameStatus(state)
         {
             
             updateStatusLines(prefix, `Mode: ${g_UIState.tools_mode}`);
+            break;
+        }
+    case "assign-damage":
+        {
+            let unassigned_damage_points = 0;
+            for (let i=0; g_LocalGameState.unassignedDamage && i<g_LocalGameState.unassignedDamage.length; ++i)
+            {
+                let ude = g_LocalGameState.unassignedDamage[i];
+                unassigned_damage_points += ude.damage_points;
+            }
+            updateStatusLines(prefix, `Assign Damage ${unassigned_damage_points}`);
             break;
         }
     case "move":
@@ -715,7 +809,7 @@ function onHexClick(gamestate, hex, event)
                     uiUpdateButtons(patch);
                 }
             }
-
+            
             refreshUi();
             
             break;
