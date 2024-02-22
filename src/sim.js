@@ -100,6 +100,15 @@ class UnassignedDamageElement
     }
 };
 
+class PendingDamageAssignmentElement
+{
+    constructor(system_name, element_index)
+    {
+        this.system_name = system_name;
+        this.index = element_index;
+    }
+};
+
 class UiPatchElement
 {
     constructor(label, onpress, ...args)
@@ -108,7 +117,7 @@ class UiPatchElement
         this.onpress = onpress;
         this.args = args;
 
-        this.enabled = () => { return true; };
+        this.enabled = (state) => { return true; };
     }
 };
 
@@ -137,7 +146,8 @@ let g_LocalGameState =
         }
     ],
     updateShip: null,
-    unassignedDamage: null
+    unassignedDamage: [],
+    pendingAssignDamage: []
 };
 
 const g_Debug = false;
@@ -148,7 +158,7 @@ const g_Debug = false;
 // * move
 // * assign-damage
 
-var g_UIState =
+let g_UIState =
 {
     mouse: { x: 0, y: 0 },
     viewport: { x: 0, y: 0, width: 1000, height: 1000 },
@@ -216,11 +226,12 @@ function serverCall(url, data, callback)
             callback(response);
         }
     };
-
+    
     let params = deepCopy(data);
     params.game_id = g_LocalGameState.game_id;
     xhr.send(JSON.stringify(params));
 }
+
 
 function serverMoveShip(data)
 {
@@ -424,32 +435,63 @@ function changeDebugOptions(event)
     }
 }
 
-function debugUiDamageOnShield()
+function applyToShipcard(func)
 {
     let ship_info_container = document.getElementById("ship-info-container");
     let embed = ship_info_container.querySelector("embed");
     let svg = embed.getSVGDocument();
     if (svg)
     {
-        let svg0 = svg.querySelector('#svg1974');
-        let shieldBox0 = svg0.querySelector('#shield1_0');
-        shieldBox0.setAttribute('class', 'shield-damaged');
+        let shipCard = svg.getElementById('svg1974');
+        func(shipCard);
     }
+    else
+    {
+        embed.onload = (event) => { 
+            let svg = event.target.getSVGDocument();
+            let shipCard = svg.getElementById('svg1974');
+            func(shipCard);
+        };
+    }
+}
+
+function debugUiDamageOnShield()
+{
+    applyToShipcard((shipCard) =>
+    {
+        let shieldBox0 = shipCard.querySelector('#shield1_0');
+        shieldBox0.setAttribute('class', 'shield-damaged');
+    });
     
     return true;
 }
 
 function resetUiDamageOnShield()
 {
-    let ship_info_container = document.getElementById("ship-info-container");
-    let embed = ship_info_container.querySelector("embed");
-    let svg = embed.getSVGDocument();
-    if (svg)
+    applyToShipcard((shipCard) =>
     {
-        let svg0 = svg.querySelector('#svg1974');
-        let shieldBox0 = svg0.querySelector('#shield1_0');
+        let shieldBox0 = shipCard.querySelector('#shield1_0');
         shieldBox0.setAttribute('class', 'shield-undamaged');
+    });
+}
+
+function serverAssignDamage()
+{
+    console.log("serverAssignDamage");
+}
+
+function uiSetAssignDamageMode()
+{
+    let patch = [];
+    {
+        let pe = new UiPatchElement('Commit', serverAssignDamage, null);
+        pe.enabled = (state) => getUnassignedDamagePoints(g_LocalGameState)==0;
+        patch.push(pe);
     }
+    
+    g_UIState.tools_mode = "assign-damage";
+    uiUpdateButtons(patch);
+    refreshUi();    
 }
 
 function debugSetUnassignedDamageShield()
@@ -457,17 +499,14 @@ function debugSetUnassignedDamageShield()
     let e = new UnassignedDamageElement("shield1", 4);
     g_LocalGameState.unassignedDamage = [ e ];
 
-    g_UIState.tools_mode = "assign-damage";
-    
-    uiUpdateButtons(null);
-    refreshUi();
-    
+    uiSetAssignDamageMode();
+
     return false;
 }
 
 function resetSetUnassignedDamage()
 {
-    console_log("resetSetUnassignedDamage");
+    console.log("resetSetUnassignedDamage");
 }
 
 function debugReset()
@@ -517,11 +556,63 @@ function updateStatusLines(value0, value1, patches=null)
             let patch = patches[i];
             let label = patch.label;
             let func = patch.onpress;
-            buttons.push({label: label, id: label, onclick: () => { func(...patch.args); }});
+            let button_data = {label: label, id: label, onclick: () => { func(...patch.args); }};
+            
+            button_data.enabled = patch.enabled(g_LocalGameState);
+            buttons.push(button_data);
         }
     }
     
     g_ActionButtons.value = buttons;
+}
+
+function getUnassignedDamagePoints(state)
+{
+    let damage_points_by_system = {};
+    
+    for (let i=0,ni=state.unassignedDamage.length,unassignedDamage = state.unassignedDamage; i<ni; ++i)
+    {
+        let ude = unassignedDamage[i];
+        if (!(ude.system_name in damage_points_by_system))
+            damage_points_by_system[ude.system_name] = 0;
+        
+        damage_points_by_system[ude.system_name] += ude.damage_points;
+    }
+    
+    // first collect the pending damage to be assigned
+    for (let i=0,ni=state.pendingAssignDamage.length; i<ni; ++i)
+        damage_points_by_system[state.pendingAssignDamage[i].system_name]--;
+
+    let unassigned_damage_points = 0;
+    for (let system in damage_points_by_system)
+        unassigned_damage_points += damage_points_by_system[system];
+    
+    return unassigned_damage_points;
+}
+
+function getEligibleUnassignedDamageElement(system_name)
+{
+    // first collect the pending damage to be assigned
+    let pending_damage = 0;
+    for (let i=0,ni=g_LocalGameState.pendingAssignDamage.length; i<ni; ++i)
+    {
+        if (g_LocalGameState.pendingAssignDamage[i].system_name == system_name)
+            pending_damage++;
+    }
+    
+    for (let i=0,ni=g_LocalGameState.unassignedDamage.length,unassigned_damage_points = 0; i<ni; ++i)
+    {
+        let ude = g_LocalGameState.unassignedDamage[i];
+        if (ude.system_name == system_name)
+        {
+            let temp = unassigned_damage_points + ude.damage_points;
+            if (temp > pending_damage)
+                return ude;
+            unassigned_damage_points = temp;
+        }
+    }
+    
+    return null;
 }
 
 function updateGameStatus(state)
@@ -541,13 +632,8 @@ function updateGameStatus(state)
         }
     case "assign-damage":
         {
-            let unassigned_damage_points = 0;
-            for (let i=0; g_LocalGameState.unassignedDamage && i<g_LocalGameState.unassignedDamage.length; ++i)
-            {
-                let ude = g_LocalGameState.unassignedDamage[i];
-                unassigned_damage_points += ude.damage_points;
-            }
-            updateStatusLines(prefix, `Assign Damage ${unassigned_damage_points}`);
+            let unassigned_damage_points = getUnassignedDamagePoints(g_LocalGameState);
+            updateStatusLines(prefix, `Assign Damage ${unassigned_damage_points}`, g_UIState.patch);
             break;
         }
     case "move":
@@ -840,7 +926,7 @@ function onHexClick(gamestate, hex, event)
     }
 }
 
-function addCallbacks()
+function uiAddEventHandlers()
 {
     {
         let num_cols = 10;
@@ -904,6 +990,40 @@ function addCallbacks()
     updateGameStatus(g_LocalGameState);
 }
 
+function uiAddShipcardEventHandlers()
+{
+    applyToShipcard((shipCard) =>
+    {
+        for (let i=0,ni=30; i<ni; ++i)
+        {
+            let shieldBox = shipCard.querySelector(`#shield1_${i}`);
+            shieldBox.addEventListener('click', (event) =>
+                                       {
+                                           let id = i;
+                                           if (g_UIState.tools_mode == "assign-damage")
+                                           {
+                                               let klass = event.target.getAttribute('class');
+                                               if (klass == 'shield-undamaged')
+                                               {
+                                                   let get_eligible_unassigned_damage_element = getEligibleUnassignedDamageElement('shield1');
+                                                   if (get_eligible_unassigned_damage_element)
+                                                   {
+                                                       let pdae = new PendingDamageAssignmentElement('shield1', id);
+                                                       g_LocalGameState.pendingAssignDamage.push(pdae);
+                                                       
+                                                       event.target.setAttribute('class', 'shield-damaged');
+                                                       
+                                                       // fixme - need this to update status bar, maybe make reactive?
+                                                       uiSetAssignDamageMode();
+                                                       refreshUi();
+                                                   }
+                                               }
+                                           }
+                                       });
+        }
+    });
+}
+
 function draw()
 {
     let svg = document.getElementById("svg");
@@ -933,7 +1053,10 @@ function init()
         {
             let gamestate = JSON.parse(xhr.response).game_state;
             evaluateGameState(g_LocalGameState, gamestate);
-            addCallbacks();
+            uiAddEventHandlers();
+            
+            // jiv fixme probably doesn't belong here
+            uiAddShipcardEventHandlers();
         }
     };
     xhr.send(JSON.stringify({

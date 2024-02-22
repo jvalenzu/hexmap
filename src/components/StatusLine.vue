@@ -13,9 +13,10 @@ const props = defineProps(['turn_status', 'context_message', 'debug_options', 'a
     </div>
     <div style="float: left; padding-right: 89px; padding-left: 89px;">{{turn_status.value}}</div>
     <div id="button-bar" style="float: right;">
-        <button v-for="button in action_buttons.value" :id="button.id" :onclick="button.onclick">
-            {{button.label}}
-        </button>        
+        <template v-for="button in action_buttons.value">
+            <button v-if="button.enabled" :id="button.id" :onclick="button.onclick">{{button.label}}</button>
+            <button v-else disabled>{{button.label}}</button>
+        </template>
     </div>
     {{context_message.value}}
 </div>
