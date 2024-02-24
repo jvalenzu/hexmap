@@ -8,37 +8,49 @@ const kFacingS  = 3;
 const kFacingSW = 4;
 const kFacingNW = 5;
 
+// jiv fixme: move to shared module
+class UnassignedDamageElement
+{
+  constructor(system_name, damage_points)
+  {
+    this.system_name = system_name;
+    this.damage_points = damage_points;
+  }
+};
+
 class Game
 {
-    constructor(id, player0, player1, player2, player3)
-    {
-        this.game_id = id;
-        this.player0 = player0;
-        this.player1 = player1;
-        this.player2 = player2;
-        this.player3 = player3;
-    }
+  constructor(id, player0, player1, player2, player3)
+  {
+    this.game_id = id;
+    this.player0 = player0;
+    this.player1 = player1;
+    this.player2 = player2;
+    this.player3 = player3;
+  }
 };
 
 class Ship
 {
-    constructor(game_id, ship_id, player_id, hex_id, facing)
-    {
-        this.game_id = game_id;
-        this.ship_id = ship_id;
-        this.player_id = player_id;
-        this.hex_id = hex_id;
-        this.facing = facing;
-    }
+  constructor(game_id, ship_id, player_id, hex_id, facing)
+  {
+    this.game_id = game_id;
+    this.ship_id = ship_id;
+    this.player_id = player_id;
+    this.hex_id = hex_id;
+    this.facing = facing;
+    
+    this.unassigned_damage = [];
+  }
 };
 
 class Player
 {
-    constructor(name, player_id)
-    {
-        this.name = name;
-        this.player_id = player_id;
-    }
+  constructor(name, player_id)
+  {
+    this.name = name;
+    this.player_id = player_id;
+  }
 };
 
 let s_player_id = 1;
@@ -172,16 +184,52 @@ app.post("/moveship", (req, res, arg) => {
             
             data.return = generateDelta(null, null, null, null, null, [ ship ]);
             data.status = "success";
+
+            break;
         }
     }
     
     res.json(data);
 });
+
 // 
 app.post("/getstate", (req, res, arg) => {
     let game_id = req.body.game_id;
     let game_state = generateState(game_id);
     res.json({ "game_state": game_state});
+});
+
+// 
+app.post("/debug_set_assign_damage", (req, res, arg) => {
+    let data = {
+        "status": "error"
+    };
+
+    if ("system_name" in req.body && "damage_points" in req.body)
+    {
+        let game_id = req.body.game_id;
+        let ship_id = req.body.ship_id;
+        data.error_message = `couldn't find ship ${req.body.ship_id}`;
+        
+        for (let i=0, ni=s_ships.length; i<ni; ++i)
+        {
+            let ship = s_ships[i];
+            if (ship.game_id == game_id && ship.ship_id == ship_id) {
+                console.log("hit");
+                ship.unassigned_damage.push(new UnassignedDamageElement(req.body.system_name, req.body.damage_points));
+                data.return = generateDelta(null, null, null, null, null, [ ship ]);
+                data.status = "success";
+                delete data.error_message;
+                break;
+            }
+        }
+
+    }
+    else {
+        data.error_message = `illformed req body: requires system_name and damage_points`;
+    }
+
+    res.json(data);
 });
 
 // debug

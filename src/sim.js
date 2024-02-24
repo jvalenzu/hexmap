@@ -73,13 +73,14 @@ const kDebugOptions = [
     { "text": "Reset", "value": "debugReset" },
     { "text": "Move Mode", "value": "debugSetMoveMode" },
     { "text": "UI 1 Damage on Shield", "value": "debugUiDamageOnShield" },
-    { "text": "Set unassigned damage shield", "value": "debugSetUnassignedDamageShield" }
+    { "text": "UI Set unassigned damage shield", "value": "debugUiSetUnassignedDamageShield" },
+    { "text": "Server Set unassigned damage shield", "value": "debugServerSetUnassignedDamageShield" }
 ];
 
 let g_DebugBinding = {};
 
 
-class Ship
+class UiShip
 {
     constructor(id, callsign, klass, hexid, facing)
     {
@@ -88,15 +89,18 @@ class Ship
         this.klass = klass;
         this.hexid = hexid;
         this.facing = facing;
+        
+        this.unassigned_damage = [];
     }
 };
 
 class UnassignedDamageElement
 {
-    constructor(system_name, damage_points)
+    constructor(system_name, damage_points, ship_id)
     {
         this.system_name = system_name;
         this.damage_points = damage_points;
+        this.ship_id = ship_id;
     }
 };
 
@@ -175,10 +179,9 @@ function evaluateDeltaState(gamestate, deltaState)
     {
         for (let i=0,ni=deltaState.add.ships.length; i<ni; ++i)
         {
-            let shipPrius = deltaState.add.ships[i];
-            let hex = document.getElementById(shipPrius.hex_id);
-            
-            addLocalShip(g_LocalGameState, shipPrius.ship_id, shipPrius.facing, hex);
+            let shipState = deltaState.add.ships[i];
+            let hex = document.getElementById(shipState.hex_id);
+            addUiShip(g_LocalGameState, shipState, hex);
         }
     }
     
@@ -190,7 +193,7 @@ function evaluateDeltaState(gamestate, deltaState)
              jiv fixme
              let shipPrius = deltaState.remove.ships[i];
              let hex = document.getElementById(shipPrius.hex_id);
-             addLocalShip(g_LocalGameState, hex, shipPrius.facing);
+             addUiShip(g_LocalGameState, hex, shipPrius.facing);
              */
         }
     }
@@ -199,10 +202,14 @@ function evaluateDeltaState(gamestate, deltaState)
     {    
         for (let i=0,ni=deltaState.change.ships.length; i<ni; ++i)
         {
-            let shipPrius = deltaState.change.ships[i];
-            moveLocalShip(g_LocalGameState, shipPrius);
+            let serverShip = deltaState.change.ships[i];
+            changeUiShip(g_LocalGameState, serverShip);
         }
     }
+
+    // selectively change tools mode
+    if (g_UIState.tools_mode != 'assign-damage' && gamestate.unassignedDamage.length > 0)
+        uiSetAssignDamageMode();
 }
 
 // take a game state object from the server and apply it
@@ -494,17 +501,51 @@ function uiSetAssignDamageMode()
     refreshUi();    
 }
 
-function debugSetUnassignedDamageShield()
+function debugUiSetUnassignedDamageShield()
 {
-    let e = new UnassignedDamageElement("shield1", 4);
-    g_LocalGameState.unassignedDamage = [ e ];
-
-    uiSetAssignDamageMode();
+    let ship_id = g_LocalGameState.ships[0].ship_id;
+    if (ship_id >= 0)
+    {
+        let e = new UnassignedDamageElement("shield1", 4);
+        g_LocalGameState.unassignedDamage.push(e);
+        uiSetAssignDamageMode();
+    }
 
     return false;
 }
 
-function resetSetUnassignedDamage()
+function resetUiSetUnassignedDamage()
+{
+    console.log("resetUiSetUnassignedDamage");
+}
+
+function debugServerSetUnassignedDamageShield()
+{
+    let ship_id = g_LocalGameState.ships[0].id;
+    for (let i=1, ni=g_LocalGameState.ships.length; ship_id<0 && i<ni; ++i)
+        ship_id = g_LocalGameState.ships[i].id;
+
+    let assign_damage_data = {
+        "ship_id": ship_id,
+        "system_name": "shield1",
+        "damage_points": 4
+    };
+
+    serverCall("/debug_set_assign_damage", assign_damage_data,
+               (response) =>
+               {
+                   if (response.status != "error")
+                   {
+                       evaluateDeltaState(g_LocalGameState, response.return);
+
+                       refreshUi();
+                   }
+               });
+    
+    return false;
+}
+
+function resetServerSetUnassignedDamage()
 {
     console.log("resetSetUnassignedDamage");
 }
@@ -539,8 +580,10 @@ function debugInit()
     g_DebugBinding["debugSetMoveMode"] = debugSetMoveMode;
     g_DebugBinding["debugUiDamageOnShield"] = debugUiDamageOnShield;
     g_DebugBinding["debugUiDamageOnShield_reset"] = resetUiDamageOnShield;
-    g_DebugBinding["debugSetUnassignedDamageShield"] = debugSetUnassignedDamageShield;
-    g_DebugBinding["debugSetUnassignedDamageShield_reset"] = resetSetUnassignedDamage;
+    g_DebugBinding["debugUiSetUnassignedDamageShield"] = debugUiSetUnassignedDamageShield;
+    g_DebugBinding["debugUiSetUnassignedDamageShield_reset"] = resetUiSetUnassignedDamage;
+    g_DebugBinding["debugServerSetUnassignedDamageShield"] = debugServerSetUnassignedDamageShield;
+    g_DebugBinding["debugServerSetUnassignedDamageShield_reset"] = resetServerSetUnassignedDamage;
 }
 
 function updateStatusLines(value0, value1, patches=null)
@@ -569,7 +612,7 @@ function updateStatusLines(value0, value1, patches=null)
 function getUnassignedDamagePoints(state)
 {
     let damage_points_by_system = {};
-    
+
     for (let i=0,ni=state.unassignedDamage.length,unassignedDamage = state.unassignedDamage; i<ni; ++i)
     {
         let ude = unassignedDamage[i];
@@ -582,7 +625,7 @@ function getUnassignedDamagePoints(state)
     // first collect the pending damage to be assigned
     for (let i=0,ni=state.pendingAssignDamage.length; i<ni; ++i)
         damage_points_by_system[state.pendingAssignDamage[i].system_name]--;
-
+    
     let unassigned_damage_points = 0;
     for (let system in damage_points_by_system)
         unassigned_damage_points += damage_points_by_system[system];
@@ -663,29 +706,29 @@ function updateGameStatus(state)
     }
 }
 
-function addLocalShip(gamestate, ship_id, facing, hex)
+function addUiShip(gamestate, uiship, hex)
 {
     // add simulation
-    let shipInstance = new Ship(ship_id, 'ncc1701', 'heavy cruiser', hex.id, facing);
+    let shipInstance = new UiShip(uiship.ship_id, 'ncc1701', 'heavy cruiser', hex.id, uiship.facing);
     gamestate.ships.push(shipInstance);
     
     // add ui
     let image = document.createElementNS(kSvgNs, "image");
     image.setAttributeNS("http://www.w3.org/1999/xlink", "href", "assets/counters/NCC1701.png");
-    image.setAttribute("id", `ship-image-${ship_id}`);
+    image.setAttribute("id", `ship-image-${uiship.ship_id}`);
     image.setAttribute("width",200);
     image.setAttribute("height",200);
     image.setAttribute("x",-100);
     image.setAttribute("y",-100);
-    image.setAttribute("transform",`rotate(${60 * facing} 0 0)`);
+    image.setAttribute("transform",`rotate(${60 * uiship.facing} 0 0)`);
     
     hex.parentElement.appendChild(image);
 }
 
-function moveLocalShip(gamestate, shipPrius)
+function changeUiShip(gamestate, serverShip)
 {
-    let newHexId = shipPrius.hex_id;
-    let ship_id = shipPrius.ship_id;
+    let newHexId = serverShip.hex_id;
+    let ship_id = serverShip.ship_id;
     
     let newHex = document.getElementById(newHexId);
     let shipInstance = getShipById(gamestate, ship_id);
@@ -693,13 +736,17 @@ function moveLocalShip(gamestate, shipPrius)
     let oldHex = document.getElementById(oldHexId);
     
     let image = document.getElementById(`ship-image-${ship_id}`);
-    image.setAttribute("transform",`rotate(${60 * shipPrius.facing} 0 0)`);
+    image.setAttribute("transform",`rotate(${60 * serverShip.facing} 0 0)`);
     
     oldHex.parentElement.removeChild(image);
     newHex.parentElement.appendChild(image);
     
-    shipInstance.facing = shipPrius.facing;
-    shipInstance.hexid = shipPrius.hex_id;
+    shipInstance.facing = serverShip.facing;
+    shipInstance.hexid = serverShip.hex_id;
+
+    // jiv dedupe
+    for (let i=0; i<serverShip.unassigned_damage.length; ++i)
+        gamestate.unassignedDamage.push(serverShip.unassigned_damage[i]);
 }
 
 function getDirectionFacing(sourceHexId, targetHexId)
@@ -845,7 +892,7 @@ function onHexClick(gamestate, hex, event)
             // jiv fixme: /addship to update server state
             let ship_id = g_AssetData.shipYard.id_gen++;
             
-            addLocalShip(gamestate, ship_id, 0, hex);
+            addUiShip(gamestate, ship_id, 0, hex);
             
             // update status line
             g_UIState.tools_mode = "move";
