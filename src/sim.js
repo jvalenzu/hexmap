@@ -172,7 +172,6 @@ let g_UIState =
     viewport: { x: 0, y: 0, width: 1000, height: 1000 },
     selectedHex: null,
     altSelectedHex: null,
-    events: 0,
     tools_mode: "move",
     patch: null,
     currentShipId: -1
@@ -813,7 +812,7 @@ function addUiShip(gamestate, serverShip, hex)
         
         let ship_info_container = document.getElementById("ship-info-container");
         ship_info_container.appendChild(embed);
-
+        
         uiAddShipcardEventHandlers(serverShip.ship_id);
     }
     
@@ -1034,7 +1033,7 @@ function onHexClick(gamestate, hex, event)
             let ship_id = g_AssetData.shipYard.id_gen++;
             
             addUiShip(gamestate, ship_id, 0, hex);
-
+            
             swapShipCard({ship_id: ship_id});
             
             // update status line
