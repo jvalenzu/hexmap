@@ -1,4 +1,4 @@
-.shield-undamaged {
+.shield {
   fill:rgb(89.509583%,87.298584%,94.949341%);
   fill-opacity:1;
   fill-rule:nonzero;
@@ -10,14 +10,7 @@
   stroke-width:0.998;
 }
     
-.shield-damaged {
-  fill:rgb(19.509583%,17.298584%,14.949341%);
-  fill-opacity:1;
-  fill-rule:nonzero;
-  stroke:rgb(13.729858%,12.159729%,12.548828%);
-  stroke-linecap:butt;
-  stroke-linejoin:miter;
-  stroke-miterlimit:3.864;
-  stroke-opacity:1;
-  stroke-width:0.998;
+.damaged {
+    fill:rgb(0,0,0);
+    fill-opacity:0.75;
 }

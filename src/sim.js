@@ -515,7 +515,7 @@ function applyToShipcard(func, id=-1)
             let previous_callback = null;
             if (embed.onload)
                 previous_callback = embed.onload;
-
+            
             embed.onload = (event) => {
                 if (previous_callback)
                     previous_callback(event);
@@ -533,7 +533,7 @@ function debugUiDamageOnShield()
     applyToShipcard((shipCard) =>
     {
         let shieldBox0 = shipCard.querySelector('#shield1_0');
-        shieldBox0.setAttribute('class', 'shield-damaged');
+        shieldBox0.classList.add('damaged');
     });
     
     return true;
@@ -544,7 +544,7 @@ function resetUiDamageOnShield()
     applyToShipcard((shipCard) =>
     {
         let shieldBox0 = shipCard.querySelector('#shield1_0');
-        shieldBox0.setAttribute('class', 'shield-undamaged');
+        shieldBox0.classList.remove('damaged');
     });
 }
 
@@ -894,12 +894,7 @@ function setDamage(serverShip)
                     
                     let system_box = shipCard.querySelector(`#${system_name}_${index}`);
                     if (system_box)
-                    {
-                        // jiv fixme
-                        //   should just add damage class and it should map to shield-damaged
-                        if (system_name == "shield1")
-                            system_box.setAttribute('class', 'shield-damaged');
-                    }
+                        system_box.classList.add('damaged');
                 }
             };
     
@@ -1210,8 +1205,7 @@ function uiAddShipcardEventHandlers(id)
                                                            let id = i;
                                                            if (g_UIState.tools_mode == "assign-damage")
                                                            {
-                                                               let klass = event.target.getAttribute('class');
-                                                               if (klass == 'shield-undamaged')
+                                                               if (!event.target.classList.contains('damaged'))
                                                                {
                                                                    let get_eligible_unassigned_damage_element = getEligibleUnassignedDamageElement('shield1');
                                                                    if (get_eligible_unassigned_damage_element)
@@ -1219,7 +1213,7 @@ function uiAddShipcardEventHandlers(id)
                                                                        let pdae = new PendingDamageAssignmentElement('shield1', id, get_eligible_unassigned_damage_element.uuid);
                                                                        g_LocalGameState.pendingAssignDamage.push(pdae);
                                                                        
-                                                                       event.target.setAttribute('class', 'shield-damaged');
+                                                                       event.target.classList.add('damaged');
                                                                        
                                                                        // fixme - need this to update status bar, maybe make reactive?
                                                                        uiSetAssignDamageMode();
