@@ -1,9 +1,26 @@
 // jiv todo
 //
+// * other player's stuff
+//
+// * weapons
+//   - disrupter
+//   - phasers
+//   - photon torpedos
+//     o standard
+//     o overload
+//   - plasma torpedos
+//   - drones
+//
+// * event handlers on all system types
+//
+// * pull out per-ship data so that we don't have things like hardcoded # of shield boxes
+//   for CA
+//
+// * ship name on ship cards
+//
 // * need image dimension information associated ship pieces like NCC1701.png in order to
 //   avoid hard coded tweaks in code
 //
-// * have a ship playable card in addition to starmap
 // * zoom controls
 //
 // * different context specific "modes"
