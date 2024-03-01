@@ -20,6 +20,8 @@
 // * acceleration this impulse
 //
 // undo/redo
+//
+// associating ui counters with shipcards with other state is messy
 
 /*
 
@@ -91,6 +93,7 @@ class UiShip
         this.facing = facing;
         
         this.unassigned_damage = [];
+        this.assigned_damage = [];
     }
 };
 
@@ -106,10 +109,11 @@ class UnassignedDamageElement
 
 class PendingDamageAssignmentElement
 {
-    constructor(system_name, element_index)
+    constructor(system_name, element_index, uuid)
     {
         this.system_name = system_name;
         this.index = element_index;
+        this.uuid = uuid;
     }
 };
 
@@ -120,7 +124,7 @@ class UiPatchElement
         this.label = label;
         this.onpress = onpress;
         this.args = args;
-
+        
         this.enabled = (state) => { return true; };
     }
 };
@@ -170,7 +174,8 @@ let g_UIState =
     altSelectedHex: null,
     events: 0,
     tools_mode: "move",
-    patch: null
+    patch: null,
+    currentShipId: -1
 };
 
 function evaluateDeltaState(gamestate, deltaState)
@@ -206,10 +211,42 @@ function evaluateDeltaState(gamestate, deltaState)
             changeUiShip(g_LocalGameState, serverShip);
         }
     }
-
+    
     // selectively change tools mode
     if (g_UIState.tools_mode != 'assign-damage' && gamestate.unassignedDamage.length > 0)
         uiSetAssignDamageMode();
+}
+
+function swapShipCard(serverShip)
+{
+    let ship_id = serverShip.ship_id;
+    
+    if (g_UIState.currentShipId != ship_id)
+    {
+        g_UIState.currentShipId = ship_id;
+        
+        let ship_info_container = document.getElementById("ship-info-container");
+        for (let c=0,nc=ship_info_container.children.length; c<nc; ++c)
+        {
+            let element = ship_info_container.children[c];
+            if (element.type == "image/svg+xml")
+            {
+                if (element.id == `ship-card-${ship_id}`)
+                {
+                    // hide other ship cards
+                    element.setAttribute("class", "enabled");
+                }
+                else
+                {
+                    // hide other ship cards
+                    element.setAttribute("class", "disabled");
+                }
+            }
+        }
+
+        // mark damage on card
+        setDamage(serverShip);
+    }
 }
 
 // take a game state object from the server and apply it
@@ -442,23 +479,36 @@ function changeDebugOptions(event)
     }
 }
 
-function applyToShipcard(func)
+function applyToShipcard(func, id=-1)
 {
     let ship_info_container = document.getElementById("ship-info-container");
-    let embed = ship_info_container.querySelector("embed");
-    let svg = embed.getSVGDocument();
-    if (svg)
+    for (let c=0,nc=ship_info_container.children.length; c<nc; ++c)
     {
-        let shipCard = svg.getElementById('svg1974');
-        func(shipCard);
-    }
-    else
-    {
-        embed.onload = (event) => { 
-            let svg = event.target.getSVGDocument();
+        let embed = ship_info_container.children[c];
+        if ((id != -1) && embed.id != `ship-card-${id}`)
+            continue;
+        
+        let svg = embed.getSVGDocument();
+        if (svg && svg.readyState == "complete")
+        {
             let shipCard = svg.getElementById('svg1974');
-            func(shipCard);
-        };
+            func(shipCard, embed);
+        }
+        else
+        {
+            let previous_callback = null;
+            if (embed.onload)
+                previous_callback = embed.onload;
+
+            embed.onload = (event) => {
+                if (previous_callback)
+                    previous_callback(event);
+                
+                let svg = event.target.getSVGDocument();
+                let shipCard = svg.getElementById('svg1974');
+                func(shipCard, event.target);
+            };
+        }
     }
 }
 
@@ -484,7 +534,36 @@ function resetUiDamageOnShield()
 
 function serverAssignDamage()
 {
-    console.log("serverAssignDamage");
+    let assign_damage_data = {
+        "ship_id": g_UIState.currentShipId,
+        "pending_assign_damage": g_LocalGameState.pendingAssignDamage
+    };
+    
+    serverCall("/assign_damage", assign_damage_data,
+               (response) =>
+               {
+                   if (response.status != "error")
+                   {
+                       evaluateGameState(g_LocalGameState, response.game_state);
+                       uiSetModeByGameState();
+                       
+                       refreshUi();
+                   }
+               });
+    
+    return false;
+}
+
+function uiSetModeByGameState()
+{
+    let old_mode = g_UIState.tools_mode;
+    
+    if (g_LocalGameState.unassignedDamage.length > 0)
+        uiSetAssignDamageMode();
+    
+    g_UIState.tools_mode = 'default';
+    if (g_UIState.tools_mode != old_mode)
+        refreshUi();
 }
 
 function uiSetAssignDamageMode()
@@ -510,7 +589,7 @@ function debugUiSetUnassignedDamageShield()
         g_LocalGameState.unassignedDamage.push(e);
         uiSetAssignDamageMode();
     }
-
+    
     return false;
 }
 
@@ -524,20 +603,20 @@ function debugServerSetUnassignedDamageShield()
     let ship_id = g_LocalGameState.ships[0].id;
     for (let i=1, ni=g_LocalGameState.ships.length; ship_id<0 && i<ni; ++i)
         ship_id = g_LocalGameState.ships[i].id;
-
+    
     let assign_damage_data = {
         "ship_id": ship_id,
         "system_name": "shield1",
         "damage_points": 4
     };
-
+    
     serverCall("/debug_set_assign_damage", assign_damage_data,
                (response) =>
                {
                    if (response.status != "error")
                    {
                        evaluateDeltaState(g_LocalGameState, response.return);
-
+                       
                        refreshUi();
                    }
                });
@@ -612,7 +691,7 @@ function updateStatusLines(value0, value1, patches=null)
 function getUnassignedDamagePoints(state)
 {
     let damage_points_by_system = {};
-
+    
     for (let i=0,ni=state.unassignedDamage.length,unassignedDamage = state.unassignedDamage; i<ni; ++i)
     {
         let ude = unassignedDamage[i];
@@ -669,7 +748,6 @@ function updateGameStatus(state)
     {
         default:
         {
-            
             updateStatusLines(prefix, `Mode: ${g_UIState.tools_mode}`);
             break;
         }
@@ -706,27 +784,52 @@ function updateGameStatus(state)
     }
 }
 
-function addUiShip(gamestate, uiship, hex)
+function selectUiShip()
+{
+}
+
+function addUiShip(gamestate, serverShip, hex)
 {
     // add simulation
-    let shipInstance = new UiShip(uiship.ship_id, 'ncc1701', 'heavy cruiser', hex.id, uiship.facing);
+    let shipInstance = new UiShip(serverShip.ship_id, 'ncc1701', 'heavy cruiser', hex.id, serverShip.facing);
     gamestate.ships.push(shipInstance);
     
     // add ui
     let image = document.createElementNS(kSvgNs, "image");
     image.setAttributeNS("http://www.w3.org/1999/xlink", "href", "assets/counters/NCC1701.png");
-    image.setAttribute("id", `ship-image-${uiship.ship_id}`);
+    image.setAttribute("id", `ship-image-${serverShip.ship_id}`);
     image.setAttribute("width",200);
     image.setAttribute("height",200);
     image.setAttribute("x",-100);
     image.setAttribute("y",-100);
-    image.setAttribute("transform",`rotate(${60 * uiship.facing} 0 0)`);
     
     hex.parentElement.appendChild(image);
+    
+    {
+        let embed = document.createElement("embed");
+        embed.setAttribute("id", `ship-card-${serverShip.ship_id}`);
+        embed.setAttribute("src", "assets/ships/FederationHeavyCruiser.svg");
+        embed.setAttribute("type", "image/svg+xml");
+        
+        let ship_info_container = document.getElementById("ship-info-container");
+        ship_info_container.appendChild(embed);
+
+        uiAddShipcardEventHandlers(serverShip.ship_id);
+    }
+    
+    changeUiShip(g_LocalGameState, serverShip);
+    
+    if (g_UIState.currentShipId == -1)
+        swapShipCard(serverShip);
 }
 
 function changeUiShip(gamestate, serverShip)
 {
+    if (!("hex_id" in serverShip) || !("ship_id" in serverShip))
+    {
+        throw new Error("serverShip missing fields: " + JSON.stringify(serverShip));
+    }
+    
     let newHexId = serverShip.hex_id;
     let ship_id = serverShip.ship_id;
     
@@ -738,15 +841,53 @@ function changeUiShip(gamestate, serverShip)
     let image = document.getElementById(`ship-image-${ship_id}`);
     image.setAttribute("transform",`rotate(${60 * serverShip.facing} 0 0)`);
     
-    oldHex.parentElement.removeChild(image);
-    newHex.parentElement.appendChild(image);
+    if (oldHex != newHex)
+    {
+        oldHex.parentElement.removeChild(image);
+        newHex.parentElement.appendChild(image);
+    }
     
     shipInstance.facing = serverShip.facing;
     shipInstance.hexid = serverShip.hex_id;
+    
+    let unassigned_damage_set = {};
+    for (let i=0; i<gamestate.unassignedDamage.length; ++i)
+        unassigned_damage_set[gamestate.unassignedDamage[i]] = true;
+    
+    if (!(serverShip.uuid in unassigned_damage_set))
+    {
+        unassigned_damage_set[serverShip.uuid] = 1;
+        
+        for (let i=0; i<serverShip.unassigned_damage.length; ++i)
+        {
+            let ude = serverShip.unassigned_damage[i];
+            gamestate.unassignedDamage.push(ude);
+        }
+    }
+}
 
-    // jiv dedupe
-    for (let i=0; i<serverShip.unassigned_damage.length; ++i)
-        gamestate.unassignedDamage.push(serverShip.unassigned_damage[i]);
+function setDamage(serverShip)
+{
+    let func = (shipCard, serverShip) =>
+            {
+                for (let i=0,ni=serverShip.assigned_damage.length; i<ni; ++i)
+                {
+                    let ad = serverShip.assigned_damage[i];
+                    let system_name = ad.system_name;
+                    let index = ad.index;
+                    
+                    let system_box = shipCard.querySelector(`#${system_name}_${index}`);
+                    if (system_box)
+                    {
+                        // jiv fixme
+                        //   should just add damage class and it should map to shield-damaged
+                        if (system_name == "shield1")
+                            system_box.setAttribute('class', 'shield-damaged');
+                    }
+                }
+            };
+    
+    applyToShipcard((shipCard) => func(shipCard, serverShip), serverShip.ship_id);
 }
 
 function getDirectionFacing(sourceHexId, targetHexId)
@@ -893,6 +1034,8 @@ function onHexClick(gamestate, hex, event)
             let ship_id = g_AssetData.shipYard.id_gen++;
             
             addUiShip(gamestate, ship_id, 0, hex);
+
+            swapShipCard({ship_id: ship_id});
             
             // update status line
             g_UIState.tools_mode = "move";
@@ -917,6 +1060,8 @@ function onHexClick(gamestate, hex, event)
                 hex.setAttribute("class", "hex-selected-secondary");
                 
                 uiUpdateButtons(null);
+                
+                swapShipCard(gamestate.ships[index]);
             }
             else if (gamestate.updateShip)
             {
@@ -1037,38 +1182,38 @@ function uiAddEventHandlers()
     updateGameStatus(g_LocalGameState);
 }
 
-function uiAddShipcardEventHandlers()
+function uiAddShipcardEventHandlers(id)
 {
-    applyToShipcard((shipCard) =>
-    {
-        for (let i=0,ni=30; i<ni; ++i)
-        {
-            let shieldBox = shipCard.querySelector(`#shield1_${i}`);
-            shieldBox.addEventListener('click', (event) =>
-                                       {
-                                           let id = i;
-                                           if (g_UIState.tools_mode == "assign-damage")
-                                           {
-                                               let klass = event.target.getAttribute('class');
-                                               if (klass == 'shield-undamaged')
-                                               {
-                                                   let get_eligible_unassigned_damage_element = getEligibleUnassignedDamageElement('shield1');
-                                                   if (get_eligible_unassigned_damage_element)
-                                                   {
-                                                       let pdae = new PendingDamageAssignmentElement('shield1', id);
-                                                       g_LocalGameState.pendingAssignDamage.push(pdae);
-                                                       
-                                                       event.target.setAttribute('class', 'shield-damaged');
-                                                       
-                                                       // fixme - need this to update status bar, maybe make reactive?
-                                                       uiSetAssignDamageMode();
-                                                       refreshUi();
-                                                   }
-                                               }
-                                           }
-                                       });
-        }
-    });
+    applyToShipcard((shipCard, parent) =>
+                    {
+                        for (let i=0,ni=30; i<ni; ++i)
+                        {
+                            let shieldBox = shipCard.querySelector(`#shield1_${i}`);
+                            shieldBox.addEventListener('click', (event) =>
+                                                       {
+                                                           let id = i;
+                                                           if (g_UIState.tools_mode == "assign-damage")
+                                                           {
+                                                               let klass = event.target.getAttribute('class');
+                                                               if (klass == 'shield-undamaged')
+                                                               {
+                                                                   let get_eligible_unassigned_damage_element = getEligibleUnassignedDamageElement('shield1');
+                                                                   if (get_eligible_unassigned_damage_element)
+                                                                   {
+                                                                       let pdae = new PendingDamageAssignmentElement('shield1', id, get_eligible_unassigned_damage_element.uuid);
+                                                                       g_LocalGameState.pendingAssignDamage.push(pdae);
+                                                                       
+                                                                       event.target.setAttribute('class', 'shield-damaged');
+                                                                       
+                                                                       // fixme - need this to update status bar, maybe make reactive?
+                                                                       uiSetAssignDamageMode();
+                                                                       refreshUi();
+                                                                   }
+                                                               }
+                                                           }
+                                                       });
+                        }
+                    }, id);
 }
 
 function draw()
@@ -1101,15 +1246,12 @@ function init()
             let gamestate = JSON.parse(xhr.response).game_state;
             evaluateGameState(g_LocalGameState, gamestate);
             uiAddEventHandlers();
-            
-            // jiv fixme probably doesn't belong here
-            uiAddShipcardEventHandlers();
         }
     };
     xhr.send(JSON.stringify({
         game_id: g_LocalGameState.game_id
     }));
-
+    
     debugInit();
     
     console.log("version: " + kBuildVersion);

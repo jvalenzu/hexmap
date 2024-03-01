@@ -15,7 +15,7 @@ import SimGlobals from './sim.js';
                     :change_debug_options="SimGlobals.changeDebugOptions"
                     :action_buttons="SimGlobals.g_ActionButtons"/>
         <div id="main-container">
-            <ShipInfo msg="Federation Heavy Cruiser"/>
+            <ShipInfo msg="Federation Heavy Cruiser" type="ca"/>
             <Map />
         </div>
     </div>
