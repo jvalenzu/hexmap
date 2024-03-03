@@ -93,8 +93,8 @@ const kDebugOptions = [
     { "text": "Reset", "value": "debugReset" },
     { "text": "Move Mode", "value": "debugSetMoveMode" },
     { "text": "UI 1 Damage on Shield", "value": "debugUiDamageOnShield" },
-    { "text": "UI Set unassigned damage shield", "value": "debugUiSetUnassignedDamageShield" },
-    { "text": "Server Set unassigned damage shield", "value": "debugServerSetUnassignedDamageShield" },
+    { "text": "UI set unassigned damage (shield)", "value": "debugUiSetUnassignedDamageShield" },
+    { "text": "Server set unassigned damage (shield)", "value": "debugServerSetUnassignedDamageShield" },
     { "text": "UI repair 1 damage", "value": "debugUiRepair1Damage" }
 ];
 
@@ -623,12 +623,12 @@ function serverAssignRepair()
 function uiSetModeByGameState()
 {
     let old_mode = g_UIState.tools_mode;
+    g_UIState.tools_mode = 'default';
 
     let unassigned_damage = getUnassignedDamage(g_LocalGameState);
     if (unassigned_damage > 0)
         uiSetAssignDamageMode();
     
-    g_UIState.tools_mode = 'default';
     if (g_UIState.tools_mode != old_mode)
         refreshUi();
 }
