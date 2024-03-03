@@ -177,7 +177,6 @@ function newShip(game_id, ship_id, player_id, hex_id, facing)
 }
 
 
-  
 let app = express();
 app.listen(3000, () => {
     console.log("Server running on port 3000");
@@ -425,7 +424,7 @@ app.post("/assign_repair", (req, res, arg) => {
       break;
     }
   }
-
+  
   res.json(data);
 });
 

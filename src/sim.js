@@ -1,9 +1,5 @@
 // jiv todo
 //
-// immediate
-//   * handle the removal of unassignedDamage and pendingDamageAssignment in the return handler from assign_damage
-//
-//
 // * other player's stuff
 //
 // * weapons
@@ -648,7 +644,7 @@ function uiSetAssignDamageMode()
     
     g_UIState.tools_mode = "assign-damage";
     uiUpdateButtons(patch);
-    refreshUi();    
+    refreshUi();
 }
 
 function debugUiSetUnassignedDamageShield()
@@ -810,7 +806,7 @@ function getEligibleUnassignedDamageElement(state, ship_id, system_name)
         if (g_LocalGameState.pendingAssignDamage[i].system_name == system_name)
             pending_damage++;
     }
-
+    
     // now loop through ships to find relevant damage
     for (let i=0,ni=state.ships.length,unassigned_damage_points=0; i<ni; ++i)
     {
@@ -900,7 +896,7 @@ function addUiShip(gamestate, serverShip, hex)
 {
     // add simulation
     let shipInstance = new UiShip(serverShip.ship_id, serverShip.player_id, 'ncc1701', 'heavy cruiser', hex.id, serverShip.facing);
-
+    
     shipInstance.assigned_damage = serverShip.assigned_damage;
     
     gamestate.ships.push(shipInstance);
@@ -1316,7 +1312,7 @@ function uiAddShipcardEventHandlers(ship_id)
                                                                            g_LocalGameState.pendingAssignRepair.push(ad);
                                                                            
                                                                            event.target.classList.remove('damaged');
-
+                                                                           
                                                                            break;
                                                                        }
                                                                    }
