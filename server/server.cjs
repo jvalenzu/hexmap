@@ -272,91 +272,161 @@ app.post("/debug_set_assign_damage", (req, res, arg) => {
     res.json(data);
 });
 
-// 
 app.post("/assign_damage", (req, res, arg) => {
-    let data = {
-        "status": "error"
-    };
-    
-    if ("ship_id" in req.body && "pending_assign_damage" in req.body)
-    {
-        let game_id = req.body.game_id;
-        let ship_id = req.body.ship_id;
-        let pending_assign_damage = req.body.pending_assign_damage;
-        
-        data.error_message = `couldn't find ship ${req.body.ship_id}`;
-        
-        for (let i=0, ni=s_ships.length; i<ni; ++i)
-        {
-            let ship = s_ships[i];
-            if (ship.game_id == game_id && ship.ship_id == ship_id) {
-                // remove unassigned damage
-                
-                // first collect damage by uuid
-                let u2p = {};
-                for (let pi=0,npi=pending_assign_damage.length; pi<npi; ++pi)
-                {
-                    let uuid = pending_assign_damage[pi].uuid;
-                    if (!(uuid in u2p))
-                        u2p[uuid] = [];
-                    
-                    u2p[uuid].push(pending_assign_damage[pi]);
-                }
-                
-                let ui=0;
-                while (ui<ship.unassigned_damage.length)
-                {
-                    let ud = ship.unassigned_damage[ui];
-                    if (ud.uuid in u2p)
-                    {
-                        let pending_assignment = u2p[ud.uuid].length;
-                        if (pending_assignment > ud.damage_points)
-                        {
-                            // we've assigned too much damage - should we anticipate this?  and if so, how should we handle it?
-                            data.error_message = `too much damage on ${ud.uuid}`;
-                            res.json(data);
-                            return;
-                        }
-                        else
-                        {
-                            ud.damage_points -= pending_assignment;
-                            
-                            // keep track of existing damage
-                            for (let i=0,ni=u2p[ud.uuid].length; i<ni; ++i)
-                            {
-                                let pending_damage_assignment = u2p[ud.uuid][i];
-                                ship.assigned_damage.push(new AssignedDamageElement(pending_damage_assignment.system_name,
-                                                                                    pending_damage_assignment.index,
-                                                                                    pending_damage_assignment.uuid));
-                            }
-                            
-                            if (ud.damage_points == 0)
-                                ship.unassigned_damage.splice(ui, 1);
-                            else
-                                ui++;
-                        }
-                    }
-                    else
-                    {
-                        console.log(`Couldn't find uuid ${ud.uuid}`);
-                        ui++;
-                    }
-                }
-                
-                data.return = generateDelta(null, null, null, null, null, [ ship ]);
-                data.status = "success";
-                delete data.error_message;
-                break;
-            }
-        }
-    }
-    else {
-        data.error_message = `illformed req body: requires ship_id and pending_assign_damage`;
-    }
-    
+  let data = {
+    "status": "error"
+  };
+  
+  if ("ship_id" in req.body && "pending_assign_damage" in req.body)
+  {
     let game_id = req.body.game_id;
-    let game_state = generateState(game_id);
-    res.json({ "game_state": game_state});
+    let ship_id = req.body.ship_id;
+    let pending_assign_damage = req.body.pending_assign_damage;
+    
+    data.error_message = `couldn't find ship ${req.body.ship_id}`;
+    
+    for (let i=0, ni=s_ships.length; i<ni; ++i)
+    {
+      let ship = s_ships[i];
+      if (ship.game_id == game_id && ship.ship_id == ship_id) {
+        // remove unassigned damage
+        
+        // first collect damage by uuid
+        let u2p = {};
+        for (let pi=0,npi=pending_assign_damage.length; pi<npi; ++pi)
+        {
+          let uuid = pending_assign_damage[pi].uuid;
+          if (!(uuid in u2p))
+            u2p[uuid] = [];
+          
+          u2p[uuid].push(pending_assign_damage[pi]);
+        }
+	
+	let handled_arguments = [];
+        let ui = 0;
+        while (ui<ship.unassigned_damage.length)
+        {
+          let ud = ship.unassigned_damage[ui];
+          if (ud.uuid in u2p)
+          {
+            let pending_assignment = u2p[ud.uuid].length;
+            if (pending_assignment > ud.damage_points)
+            {
+              // we've assigned too much damage - should we anticipate this?  and if so, how should we handle it?
+              data.error_message = `too much damage on ${ud.uuid}`;
+              res.json(data);
+              return;
+            }
+            else
+            {
+              ud.damage_points -= pending_assignment;
+              
+              // keep track of existing damage
+              for (let i=0,ni=u2p[ud.uuid].length; i<ni; ++i)
+              {
+                let pending_damage_assignment = u2p[ud.uuid][i];
+		let assigned_damage = new AssignedDamageElement(pending_damage_assignment.system_name, pending_damage_assignment.index, pending_damage_assignment.uuid);
+		ship.assigned_damage.push(assigned_damage);
+		
+		handled_arguments.push(assigned_damage);
+              }
+              
+              if (ud.damage_points == 0)
+                ship.unassigned_damage.splice(ui, 1);
+              else
+                ui++;
+            }
+          }
+          else
+          {
+            console.log(`Couldn't find uuid ${ud.uuid}`);
+            ui++;
+          }
+        }
+        
+        data.return = generateDelta(null, null, null, null, null, [ ship ]);
+	data.handled_arguments = handled_arguments;
+        data.status = "success";
+        delete data.error_message;
+        break;
+      }
+    }
+  }
+  else {
+    data.error_message = `illformed req body: requires ship_id and pending_assign_damage`;
+  }
+  
+  res.json(data);
+});
+
+//
+class assign_repair_args
+{
+  constructor(data)
+  {
+    if (!("game_id" in data))
+      throw new Error("Missing game_id");
+    if (!("ship_id" in data))
+      throw new Error("Missing ship_id");
+    if (!("pending_assign_repair" in data))
+      throw new Error("Missing pending assign repair");
+    
+    this.game_id = data.game_id;
+    this.ship_id = data.ship_id;
+    this.pending_assign_repair = data.pending_assign_repair;
+  }
+};
+
+app.post("/assign_repair", (req, res, arg) => {
+  let data = {
+    "status": "error"
+  };
+  
+  let ara = new assign_repair_args(req.body);
+  let game_id = ara.game_id;
+  let ship_id = ara.ship_id;
+  let pending_assign_damage = ara.pending_assign_damage;
+  
+  for (let i=0, ni=s_ships.length; i<ni; ++i)
+  {
+    let ship = s_ships[i];
+    if (ship.game_id == game_id && ship.ship_id == ship_id) {
+      // first collect damage by system and index
+      let repairs = {};
+      
+      for (let i=0, ni=ara.pending_assign_repair.length; i<ni; ++i)
+      {
+        let par = ara.pending_assign_repair[i];
+	let key = `${par.system_name}-${par.index}`;
+	repairs[key] = true;
+        // jiv fixme: deduct energy cost
+      }
+      
+      let handled_arguments = [];
+      for (let i=0; i<ship.assigned_damage.length; )
+      {
+        let ad = ship.assigned_damage[i];
+	let key = `${ad.system_name}-${ad.index}`;
+        if (key in repairs)
+	{
+	  handled_arguments.push(ship.assigned_damage.splice(i, 1));
+	}
+	else
+	{
+	  console.log(`Not repaired ${JSON.stringify(ad)}`);
+	  ++i;
+	}
+      }
+      
+      data.return = generateDelta(null, null, null, null, null, [ ship ]);
+      data.handled_arguments = handled_arguments;
+      data.status = "success";
+      delete data.error_message;
+      break;
+    }
+  }
+
+  res.json(data);
 });
 
 

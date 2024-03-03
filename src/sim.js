@@ -1,5 +1,9 @@
 // jiv todo
 //
+// immediate
+//   * handle the removal of unassignedDamage and pendingDamageAssignment in the return handler from assign_damage
+//
+//
 // * other player's stuff
 //
 // * weapons
@@ -62,6 +66,7 @@ const g_ContextMessage = ref("Context Message");
 const g_DebugOptions = ref([]);
 const g_ActionButtons = ref([]);
 const kBuildVersion = 6;
+const kDebugPlayerId = 1;
 const kSvgNs = "http://www.w3.org/2000/svg";
 
 const kDebugColors = [
@@ -93,7 +98,8 @@ const kDebugOptions = [
     { "text": "Move Mode", "value": "debugSetMoveMode" },
     { "text": "UI 1 Damage on Shield", "value": "debugUiDamageOnShield" },
     { "text": "UI Set unassigned damage shield", "value": "debugUiSetUnassignedDamageShield" },
-    { "text": "Server Set unassigned damage shield", "value": "debugServerSetUnassignedDamageShield" }
+    { "text": "Server Set unassigned damage shield", "value": "debugServerSetUnassignedDamageShield" },
+    { "text": "UI repair 1 damage", "value": "debugUiRepair1Damage" }
 ];
 
 let g_DebugBinding = {};
@@ -101,13 +107,14 @@ let g_DebugBinding = {};
 
 class UiShip
 {
-    constructor(id, callsign, klass, hexid, facing)
+    constructor(id, player_id, callsign, klass, hexid, facing)
     {
         this.id = id;
         this.callsign = callsign;
         this.klass = klass;
         this.hexid = hexid;
         this.facing = facing;
+        this.player_id = player_id;
         
         this.unassigned_damage = [];
         this.assigned_damage = [];
@@ -156,6 +163,7 @@ let g_AssetData =
 let g_LocalGameState =
 {
     game_id: 1,
+    local_player_id: kDebugPlayerId,
     snapshot: {},
     turn: 0,
     impulse: 0,
@@ -167,12 +175,13 @@ let g_LocalGameState =
             callsign: null,
             klass: null,
             hexid: -1,
-            facing: 0
+            facing: 0,
+            player_id: -1
         }
     ],
     updateShip: null,
-    unassignedDamage: [],
-    pendingAssignDamage: []
+    pendingAssignDamage: [],
+    pendingAssignRepair: []
 };
 
 const g_Debug = false;
@@ -182,6 +191,7 @@ const g_Debug = false;
 // * place
 // * move
 // * assign-damage
+// * repair-damage
 
 let g_UIState =
 {
@@ -193,6 +203,26 @@ let g_UIState =
     patch: null,
     currentShipId: -1
 };
+
+function getUnassignedDamage(gamestate, player_id=kDebugPlayerId)
+{
+    let ret = 0;
+    
+    for (let i=0,ni=gamestate.ships.length; i<ni; ++i)
+    {
+        let ship = gamestate.ships[i];
+        if (ship.player_id == player_id)
+        {
+            for (let j=0,nj=ship.unassigned_damage.length; j<nj; ++j)
+            {
+                let ua = ship.unassigned_damage[j];
+                ret += ua.damage_points;
+            }
+        }
+    }
+    
+    return ret;
+}
 
 function evaluateDeltaState(gamestate, deltaState)
 {
@@ -229,7 +259,8 @@ function evaluateDeltaState(gamestate, deltaState)
     }
     
     // selectively change tools mode
-    if (g_UIState.tools_mode != 'assign-damage' && gamestate.unassignedDamage.length > 0)
+    let unassigned_damage = getUnassignedDamage(gamestate);
+    if (g_UIState.tools_mode != 'assign-damage' && unassigned_damage > 0)
         uiSetAssignDamageMode();
 }
 
@@ -259,7 +290,7 @@ function swapShipCard(serverShip)
                 }
             }
         }
-
+        
         // mark damage on card
         setDamage(serverShip);
     }
@@ -289,9 +320,9 @@ function serverCall(url, data, callback)
     
     let params = deepCopy(data);
     params.game_id = g_LocalGameState.game_id;
+    params.player_id = g_LocalGameState.local_player_id;
     xhr.send(JSON.stringify(params));
 }
-
 
 function serverMoveShip(data)
 {
@@ -501,6 +532,9 @@ function applyToShipcard(func, id=-1)
     for (let c=0,nc=ship_info_container.children.length; c<nc; ++c)
     {
         let embed = ship_info_container.children[c];
+        if (!(embed instanceof HTMLEmbedElement))
+            continue;
+        
         if ((id != -1) && embed.id != `ship-card-${id}`)
             continue;
         
@@ -560,7 +594,27 @@ function serverAssignDamage()
                {
                    if (response.status != "error")
                    {
-                       evaluateGameState(g_LocalGameState, response.game_state);
+                       evaluateDeltaState(g_LocalGameState, response.return);
+                       uiSetModeByGameState();
+                   }
+               });
+    
+    return false;
+}
+
+function serverAssignRepair()
+{
+    let assign_repair_data = {
+        "ship_id": g_UIState.currentShipId,
+        "pending_assign_repair": g_LocalGameState.pendingAssignRepair
+    };
+    
+    serverCall("/assign_repair", assign_repair_data,
+               (response) =>
+               {
+                   if (response.status != "error")
+                   {
+                       evaluateDeltaState(g_LocalGameState, response.return);
                        uiSetModeByGameState();
                        
                        refreshUi();
@@ -573,8 +627,9 @@ function serverAssignDamage()
 function uiSetModeByGameState()
 {
     let old_mode = g_UIState.tools_mode;
-    
-    if (g_LocalGameState.unassignedDamage.length > 0)
+
+    let unassigned_damage = getUnassignedDamage(g_LocalGameState);
+    if (unassigned_damage > 0)
         uiSetAssignDamageMode();
     
     g_UIState.tools_mode = 'default';
@@ -598,15 +653,29 @@ function uiSetAssignDamageMode()
 
 function debugUiSetUnassignedDamageShield()
 {
-    let ship_id = g_LocalGameState.ships[0].ship_id;
+    let ship_id = g_UIState.currentShipId;
     if (ship_id >= 0)
     {
-        let e = new UnassignedDamageElement("shield1", 4);
-        g_LocalGameState.unassignedDamage.push(e);
+        let ship = getShipById(g_LocalGameState, ship_id);
+        ship.unassigned_damage.push(new UnassignedDamageElement("shield1", 1));
+
         uiSetAssignDamageMode();
     }
     
     return false;
+}
+
+function debugUiRepair1Damage()
+{
+    let patch = [];
+    {
+        let pe = new UiPatchElement('Commit', serverAssignRepair, null);
+        patch.push(pe);
+    }
+    
+    g_UIState.tools_mode = "assign-repair";
+    uiUpdateButtons(patch);
+    refreshUi();
 }
 
 function resetUiSetUnassignedDamage()
@@ -616,14 +685,10 @@ function resetUiSetUnassignedDamage()
 
 function debugServerSetUnassignedDamageShield()
 {
-    let ship_id = g_LocalGameState.ships[0].id;
-    for (let i=1, ni=g_LocalGameState.ships.length; ship_id<0 && i<ni; ++i)
-        ship_id = g_LocalGameState.ships[i].id;
-    
     let assign_damage_data = {
-        "ship_id": ship_id,
+        "ship_id": g_UIState.currentShipId,
         "system_name": "shield1",
-        "damage_points": 4
+        "damage_points": 1
     };
     
     serverCall("/debug_set_assign_damage", assign_damage_data,
@@ -632,8 +697,7 @@ function debugServerSetUnassignedDamageShield()
                    if (response.status != "error")
                    {
                        evaluateDeltaState(g_LocalGameState, response.return);
-                       
-                       refreshUi();
+                       uiSetModeByGameState();
                    }
                });
     
@@ -679,6 +743,7 @@ function debugInit()
     g_DebugBinding["debugUiSetUnassignedDamageShield_reset"] = resetUiSetUnassignedDamage;
     g_DebugBinding["debugServerSetUnassignedDamageShield"] = debugServerSetUnassignedDamageShield;
     g_DebugBinding["debugServerSetUnassignedDamageShield_reset"] = resetServerSetUnassignedDamage;
+    g_DebugBinding["debugUiRepair1Damage"] = debugUiRepair1Damage;
 }
 
 function updateStatusLines(value0, value1, patches=null)
@@ -708,13 +773,20 @@ function getUnassignedDamagePoints(state)
 {
     let damage_points_by_system = {};
     
-    for (let i=0,ni=state.unassignedDamage.length,unassignedDamage = state.unassignedDamage; i<ni; ++i)
+    for (let i=0,ni=state.ships.length; i<ni; ++i)
     {
-        let ude = unassignedDamage[i];
-        if (!(ude.system_name in damage_points_by_system))
-            damage_points_by_system[ude.system_name] = 0;
-        
-        damage_points_by_system[ude.system_name] += ude.damage_points;
+        let ship = state.ships[i];
+        if (ship.player_id == state.local_player_id)
+        {
+            for (let j=0,nj=ship.unassigned_damage.length; j<nj; ++j)
+            {
+                let ude = ship.unassigned_damage[j];
+                if (!(ude.system_name in damage_points_by_system))
+                    damage_points_by_system[ude.system_name] = 0;
+                
+                damage_points_by_system[ude.system_name] += ude.damage_points;
+            }
+        }
     }
     
     // first collect the pending damage to be assigned
@@ -728,29 +800,43 @@ function getUnassignedDamagePoints(state)
     return unassigned_damage_points;
 }
 
-function getEligibleUnassignedDamageElement(system_name)
+// return the first unassigned damage element that still needs to be satisfied
+function getEligibleUnassignedDamageElement(state, ship_id, system_name)
 {
     // first collect the pending damage to be assigned
     let pending_damage = 0;
-    for (let i=0,ni=g_LocalGameState.pendingAssignDamage.length; i<ni; ++i)
+    for (let i=0,ni=state.pendingAssignDamage.length; i<ni; ++i)
     {
         if (g_LocalGameState.pendingAssignDamage[i].system_name == system_name)
             pending_damage++;
     }
-    
-    for (let i=0,ni=g_LocalGameState.unassignedDamage.length,unassigned_damage_points = 0; i<ni; ++i)
+
+    // now loop through ships to find relevant damage
+    for (let i=0,ni=state.ships.length,unassigned_damage_points=0; i<ni; ++i)
     {
-        let ude = g_LocalGameState.unassignedDamage[i];
-        if (ude.system_name == system_name)
+        let ship = state.ships[i];
+        if (!(ship.player_id == state.local_player_id && ship.id == ship_id))
+            continue;
+        
+        for (let j=0,nj=ship.unassigned_damage.length; j<nj; ++j)
         {
-            let temp = unassigned_damage_points + ude.damage_points;
-            if (temp > pending_damage)
-                return ude;
-            unassigned_damage_points = temp;
+            let ude = ship.unassigned_damage[j];
+            if (ude.system_name == system_name)
+            {
+                let temp = unassigned_damage_points + ude.damage_points;
+                if (temp > pending_damage)
+                    return ude;
+                unassigned_damage_points = temp;
+            }
         }
     }
     
     return null;
+}
+
+function getAvailableRepairPoints(ship_id)
+{
+    return 1;
 }
 
 function updateGameStatus(state)
@@ -773,6 +859,12 @@ function updateGameStatus(state)
             updateStatusLines(prefix, `Assign Damage ${unassigned_damage_points}`, g_UIState.patch);
             break;
         }
+    case "assign-repair":
+        {
+            let available_repair_points = getAvailableRepairPoints(g_LocalGameState);
+            updateStatusLines(prefix, `Repair up to ${available_repair_points} points`, g_UIState.patch);
+            break;
+        }        
     case "move":
         {
             if (g_UIState.patch)
@@ -807,7 +899,10 @@ function selectUiShip()
 function addUiShip(gamestate, serverShip, hex)
 {
     // add simulation
-    let shipInstance = new UiShip(serverShip.ship_id, 'ncc1701', 'heavy cruiser', hex.id, serverShip.facing);
+    let shipInstance = new UiShip(serverShip.ship_id, serverShip.player_id, 'ncc1701', 'heavy cruiser', hex.id, serverShip.facing);
+
+    shipInstance.assigned_damage = serverShip.assigned_damage;
+    
     gamestate.ships.push(shipInstance);
     
     // add ui
@@ -866,20 +961,8 @@ function changeUiShip(gamestate, serverShip)
     shipInstance.facing = serverShip.facing;
     shipInstance.hexid = serverShip.hex_id;
     
-    let unassigned_damage_set = {};
-    for (let i=0; i<gamestate.unassignedDamage.length; ++i)
-        unassigned_damage_set[gamestate.unassignedDamage[i]] = true;
-    
-    if (!(serverShip.uuid in unassigned_damage_set))
-    {
-        unassigned_damage_set[serverShip.uuid] = 1;
-        
-        for (let i=0; i<serverShip.unassigned_damage.length; ++i)
-        {
-            let ude = serverShip.unassigned_damage[i];
-            gamestate.unassignedDamage.push(ude);
-        }
-    }
+    shipInstance.unassigned_damage = serverShip.unassigned_damage;
+    shipInstance.assigned_damage = serverShip.assigned_damage;
 }
 
 function setDamage(serverShip)
@@ -1193,37 +1276,55 @@ function uiAddEventHandlers()
     updateGameStatus(g_LocalGameState);
 }
 
-function uiAddShipcardEventHandlers(id)
+function uiAddShipcardEventHandlers(ship_id)
 {
     applyToShipcard((shipCard, parent) =>
                     {
+                        // shield1
                         for (let i=0,ni=30; i<ni; ++i)
                         {
                             let shieldBox = shipCard.querySelector(`#shield1_${i}`);
                             shieldBox.addEventListener('click', (event) =>
                                                        {
                                                            let id = i;
-                                                           if (g_UIState.tools_mode == "assign-damage")
+                                                           if (g_UIState.tools_mode == "assign-damage" && !event.target.classList.contains('damaged'))
                                                            {
-                                                               if (!event.target.classList.contains('damaged'))
+                                                               let get_eligible_unassigned_damage_element = getEligibleUnassignedDamageElement(g_LocalGameState, ship_id, 'shield1');
+                                                               if (get_eligible_unassigned_damage_element)
                                                                {
-                                                                   let get_eligible_unassigned_damage_element = getEligibleUnassignedDamageElement('shield1');
-                                                                   if (get_eligible_unassigned_damage_element)
+                                                                   let pdae = new PendingDamageAssignmentElement('shield1', id, get_eligible_unassigned_damage_element.uuid);
+                                                                   g_LocalGameState.pendingAssignDamage.push(pdae);
+                                                                   
+                                                                   event.target.classList.add('damaged');
+                                                                   
+                                                                   // fixme - need this to update status bar, maybe make reactive?
+                                                                   uiSetAssignDamageMode();
+                                                                   refreshUi();
+                                                               }
+                                                           }
+                                                           else if ((g_UIState.tools_mode == "assign-repair") && (event.target.classList.contains('damaged')))
+                                                           {
+                                                               let shipInstance = getShipById(g_LocalGameState, ship_id);
+                                                               if (shipInstance)
+                                                               {
+                                                                   for (let j=0; j<shipInstance.assigned_damage.length; ++j)
                                                                    {
-                                                                       let pdae = new PendingDamageAssignmentElement('shield1', id, get_eligible_unassigned_damage_element.uuid);
-                                                                       g_LocalGameState.pendingAssignDamage.push(pdae);
-                                                                       
-                                                                       event.target.classList.add('damaged');
-                                                                       
-                                                                       // fixme - need this to update status bar, maybe make reactive?
-                                                                       uiSetAssignDamageMode();
-                                                                       refreshUi();
+                                                                       let ad = shipInstance.assigned_damage[j];
+                                                                       if (ad.system_name == "shield1" && ad.index == id)
+                                                                       {
+                                                                           shipInstance.assigned_damage.splice(j, 1);
+                                                                           g_LocalGameState.pendingAssignRepair.push(ad);
+                                                                           
+                                                                           event.target.classList.remove('damaged');
+
+                                                                           break;
+                                                                       }
                                                                    }
                                                                }
                                                            }
                                                        });
                         }
-                    }, id);
+                    }, ship_id);
 }
 
 function draw()
